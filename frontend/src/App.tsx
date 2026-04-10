@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import Login from "./components/Login";
 
 function App() {
   return (
     <Routes>
-      {/* Rutas se agregan después */}
+      <Route path="/" element={<Login />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
