@@ -7,10 +7,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Node.js / Frontend
+node_modules/
+dist/
+dist-ssr/
 *.local
+
+# .NET / Backend
+bin/
+obj/
+
+# Environment
+.env
+
+# Vite cache
+.vite/
 
 # Editor directories and files
 .vscode/*

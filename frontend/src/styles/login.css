@@ -1,0 +1,136 @@
+/* Definición de colores */
+:root {
+    --primario: #8B0000;
+    --secundario: #C0A060;
+    --critico: #D64045;
+    --advertencia: #E6C229;
+    --acento: #F5F0E8;
+    --blanco: #FFFFFF;
+    --background: #f5f4ed;
+}
+
+/* Reset y fuentes */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/*  Centrar la página */
+body {
+    background-color: var(--background);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#root {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+/* Contenedores */
+.login {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    padding: 20px;
+}
+
+.logo {
+    max-width: 250px;
+    margin-bottom: 10px;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 380px;
+    border: 1px solid var(--secundario);
+    border-radius: 4px;
+    background-color: var(--blanco);
+}
+
+.login-header {
+    background-color: var(--secundario);
+    color: var(--primario);
+    text-align: center;
+    padding: 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.login-body {
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Campos de texto */
+.input-group {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.input-icon {
+    background-color: #f5f5f5;
+    padding: 10px 15px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #ccc;
+}
+
+.input-field {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    outline: none;
+    font-size: 0.95rem;
+}
+
+/* Botón Ingresar */
+.btn-ingresar {
+    background-color: var(--primario);
+    color: var(--blanco);
+    font-weight: bold;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    align-self: center;
+    margin-bottom: -11px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-ingresar:hover {
+    background-color: var(--critico);
+}
+
+
+/* Botón Olvidó su contraseña */
+.btn-olvido {
+    background: none;
+    border: none;
+    color: var(--primario);
+    font-size: 0.85rem;
+    cursor: pointer;
+    align-self: self-start;
+    text-decoration: underline;
+    padding: 0;
+    margin-top: -18px;
+    
+}
+
+.btn-olvido:hover {
+    color: var(--critico);
+}
