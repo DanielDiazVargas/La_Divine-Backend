@@ -6,21 +6,47 @@ using La_Divine.Src.Utils;
 
 namespace La_Divine.Src.Services;
 
-public class AuthServices(ContextDb contextDb, IConfiguration config) : IAuthServices
-{
+/// <summary>
+/// Servicio encargado de la autenticación
+/// de usuarios.
+/// </summary>
+public class AuthServices(ContextDb contextDb, IConfiguration config) : IAuthServices {
+
+    /// <summary>
+    /// Contexto de la base de datos.
+    /// </summary>
     private readonly ContextDb _contextDb = contextDb;
+
+    /// <summary>
+    /// Configuración general de la aplicación.
+    /// </summary>
     private readonly IConfiguration _config = config;
 
-    public async Task<LoginResponse> Login(LoginDto loginDto)
-    {
-        try {   
+    /// <summary>
+    /// Verifica las credenciales del usuario
+    /// y realiza el login.
+    /// </summary>
+    /// <param name="loginDto">
+    /// Datos ingresados por el usuario.
+    /// </param>
+    /// <returns>
+    /// Retorna una respuesta indicando
+    /// si el login fue exitoso o no.
+    /// </returns>
+    public async Task<LoginResponse> Login(LoginDto loginDto) {
+
+        try {
+
+            // Busca el usuario por correo electrónico
             var user = await _contextDb.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u=> u.Email == loginDto.Email);
+                .FirstOrDefaultAsync(u => u.Email == loginDto.Email);
 
-            // Verificación de las credenciales del usuario. Si el usuario no existe o la contraseña no coincide, se devuelve una respuesta de error.
-            if(user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password)) {
-                // Retorno de una respuesta indicando que el correo electrónico o la contraseña son incorrectos.
+            // Verifica si el usuario existe
+            // y si la contraseña es correcta
+            if(user == null || 
+               !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password)) {
+
                 return new LoginResponse {
                     Success = false,
                     Message = "Correo electrónico o contraseña incorrectos",
@@ -28,24 +54,27 @@ public class AuthServices(ContextDb contextDb, IConfiguration config) : IAuthSer
                 };
             }
 
-            // Verificación del estado del usuario. Si el usuario está inactivo, se devuelve una respuesta indicando que el usuario está inactivo y que debe contactar al administrador.
+            // Verifica si el usuario está habilitado
             if (!user.Status) {
-                // Retorno de una respuesta indicando que el usuario está inactivo y que debe contactar al administrador.
-                return new LoginResponse  {
+
+                return new LoginResponse {
                     Success = false,
                     Message = "Usuario inactivo, por favor contacte al administrador",
                     Data = null
                 };
             }
 
-            user.Name = "Francisco2 ";
-
-            await _contextDb.SaveChangesAsync();
+            // Retorna los datos del usuario autenticado
             return new LoginResponse {
+
                 Success = true,
                 Message = "Login exitoso",
+
                 Data = new DataResponseLogin {
+
+                    // Generación del token JWT
                     Token = GenerateToken.CreateToken(user, _config),
+
                     UserId = user.Id,
                     Name = user.Name,
                     LastName = user.LastName,
@@ -55,7 +84,10 @@ public class AuthServices(ContextDb contextDb, IConfiguration config) : IAuthSer
             };
         }
         catch (Exception ex) {
+
+            // Manejo de errores inesperados
             return new LoginResponse {
+
                 Success = false,
                 Message = $"Error durante el login: {ex.Message}",
                 Data = null
