@@ -4,45 +4,53 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace La_Divine.Src.Controller
 {
-    // 1. Configuramos la ruta base: http://localhost:puerto/api/Auth
+    /// <summary>
+    /// Controlador encargado de gestionar la autenticación de usuarios.
+    /// Proporciona los endpoints para el registro de nuevos clientes y el inicio de sesión.
+    /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly IAuthServices _authServices;
 
-        // Inyectamos el servicio
         public AuthController(IAuthServices authServices)
         {
             _authServices = authServices;
         }
 
-        // 2. Ruta para Registrar Cliente (Método POST)
+        /// <summary>
+        /// Registra un nuevo usuario en el sistema.
+        /// Recibe los datos del usuario, verifica que no existan duplicados y delega la creación al servicio correspondiente.
+        /// </summary>
         [HttpPost("registrar")]
         public async Task<IActionResult> Registrar([FromBody] CreateUserDto createUserDto)
         {
             try
             {
-                // Le pasamos los datos al servicio
+                // Resultado de la creación del usuario desde el servicio
                 var resultado = await _authServices.RegistrarClienteAsync(createUserDto);
 
                 return Created("", resultado); 
             }
             catch (Exception ex)
             {
-                // Si salta un error, devolvemos un Bad Request
                 return BadRequest(new { mensaje = ex.Message });
             }
         }
 
-        // 3. Ruta para Iniciar Sesión (Método POST)
+        /// <summary>
+        /// Inicia sesión en el sistema.
+        /// Verifica las credenciales del usuario y, si son válidas, genera y retorna un token JWT.
+        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUserDto loginUserDto)
         {
             try
             {
+                // Token JWT generado para el usuario autenticado
                 var token = await _authServices.IniciarSesionAsync(loginUserDto);
-                // Si el login es exitoso, devolvemos el token
+                
                 return Ok(new { token });
             }
             catch (Exception ex)
