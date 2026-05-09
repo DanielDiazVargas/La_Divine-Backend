@@ -10,15 +10,16 @@ using System.Linq;
 
 namespace La_Divine.Src.Services
 {
+    /// <summary>
+    /// Servicio que implementa la lógica de negocio para la autenticación de usuarios.
+    /// Maneja el registro de clientes, validación de RUT, encriptación de contraseñas y generación de tokens.
+    /// </summary>
     public class AuthServices : IAuthServices
     {
         private readonly ContextDb _context;
         private readonly IConfiguration _config;
-        
-        //  servicio de SendGrid
         private readonly ISendGridEmailServices _emailServices;
 
-        // Inyecta el servicio en el constructor
         public AuthServices(ContextDb context, IConfiguration config, ISendGridEmailServices emailServices)
         {
             _context = context;
@@ -26,9 +27,13 @@ namespace La_Divine.Src.Services
             _emailServices = emailServices;
         }
 
+        /// <summary>
+        /// Registra un nuevo cliente validando previamente que su RUT y Correo no existan en el sistema.
+        /// Genera una contraseña aleatoria y la envía por correo electrónico.
+        /// </summary>
         public async Task<UserResponseDto> RegistrarClienteAsync(CreateUserDto createUserDto)
         {
-            // Guarda el resultado en una variable para revisarlo
+            // Código numérico que indica si el RUT ingresado superó la validación matemática
             int estadoRut = EsRutValido(createUserDto.Rut);
 
             if (estadoRut == -1)
@@ -40,27 +45,31 @@ namespace La_Divine.Src.Services
                 throw new Exception("El RUT Ingresado no es válido.");
             }
 
+            // Bandera booleana que verifica si el correo ya está registrado en la base de datos
             var existeCorreo = await _context.Users.AnyAsync(u => u.Email == createUserDto.Email);
             if (existeCorreo)
             {
                 throw new Exception("El correo electrónico ingresado ya se encuentra registrado");
             }
 
+            // Bandera booleana que verifica si el RUT ya está asociado a otra cuenta
             var existeRut = await _context.Users.AnyAsync(u => u.Rut == createUserDto.Rut);
             if (existeRut)
             {
                 throw new Exception("El RUT ingresado ya se encuentra registrado");
             }
 
+            // Entidad del rol predeterminado para los nuevos registros
             var rolCliente = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "User");
             if (rolCliente == null)
             {
                 throw new Exception("El rol de cliente no está configurado en el sistema.");
             }
 
-            // Genera clave temporal de 8 caracteres al azar
+            // Cadena de texto aleatoria generada como contraseña inicial
             string passwordTemporal = GenerarClaveAlAzar(8);
 
+            // Entidad del nuevo usuario construida con los datos validados y la contraseña hasheada
             var nuevoUsuario = new User
             {
                 Name = createUserDto.Name,
@@ -76,7 +85,6 @@ namespace La_Divine.Src.Services
             _context.Users.Add(nuevoUsuario);
             await _context.SaveChangesAsync();
 
-            // Envia el correo con la clave usando SendGrid
             await _emailServices.SendEmailAsync(
                 toEmail: nuevoUsuario.Email,
                 subject: "Bienvenido a Teatro La Divine - Tu contraseña de acceso",
@@ -97,35 +105,55 @@ namespace La_Divine.Src.Services
             };
         }
 
+        /// <summary>
+        /// Valida las credenciales de ingreso verificando el hash de la contraseña en la base de datos y que el usuario este activo.
+        /// </summary>
         public async Task<string> IniciarSesionAsync(LoginUserDto loginUserDto)
         {
+            // Buscamos al usuario por correo
             var usuario = await _context.Users
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Email == loginUserDto.Email);
 
+            // Validamos que el usuario exista y la clave sea correcta
             if (usuario == null || !BCrypt.Net.BCrypt.Verify(loginUserDto.Password, usuario.Password))
             {
                 throw new Exception("Correo electrónico o contraseña incorrectos");
             }
 
+            // VALIDACIÓN: Si es usuario activo o inactivo
+            if (!usuario.Status)
+            {
+            throw new Exception("Tu cuenta se encuentra deshabilitada. Contacta al administrador.");
+            }
+
+            // Si todo esta correcto se genera el token
             return GenerateToken.CreateToken(usuario, _config);
         }
 
+        /// <summary>
+        /// Método privado que implementa el algoritmo del módulo 11 para validar el RUT chileno.
+        /// Retorna 0 si es válido, -1 si tiene mal formato y -2 si la estructura matemática falla.
+        /// </summary>
         private int EsRutValido(string rut)
         {
-            // Caso Rut con punto o guión
             if (string.IsNullOrWhiteSpace(rut) || rut.Contains('.') || rut.Contains('-')) return -1;
 
             rut = rut.ToUpper();
-            // Rut no válido
             if (rut.Length < 2) return -2; 
 
+            // Secuencia de números del RUT excluyendo el dígito verificador
             string cuerpo = rut.Substring(0, rut.Length - 1);
+            
+            // Dígito final proporcionado en la cadena original
             string digitoIngresado = rut.Substring(rut.Length - 1, 1);
 
             if (!int.TryParse(cuerpo, out int rutNumerico)) return -2;
 
+            // Acumulador para la suma
             int suma = 0;
+            
+            // Factor multiplicador que va del 2 al 7
             int multiplicador = 2;
 
             for (int i = cuerpo.Length - 1; i >= 0; i--)
@@ -134,9 +162,13 @@ namespace La_Divine.Src.Services
                 multiplicador = multiplicador == 7 ? 2 : multiplicador + 1;
             }
 
+            // Resto de la división por 11
             int resto = suma % 11;
+            
+            // Valor resultante para determinar el dígito verificador real
             int digitoCalculado = 11 - resto;
 
+            // Dígito verificador matemáticamente correcto
             string digitoEsperado = digitoCalculado switch
             {
                 11 => "0",
@@ -146,21 +178,25 @@ namespace La_Divine.Src.Services
 
             if (digitoIngresado == digitoEsperado)
             {
-                // Exito
                 return 0; 
             }
             else
             {
-                // Error de estructura matemática (y quita la llave mal puesta)
                 return -2; 
             }
         }
 
-        // método para generar la clave aleatoria
+        /// <summary>
+        /// Método privado que genera una cadena alfanumérica aleatoria para usarla como contraseña temporal.
+        /// </summary>
         private string GenerarClaveAlAzar(int longitud)
         {
+            // Conjunto de caracteres permitidos para la generación de la clave
             const string caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            
+            // Instancia del generador de números pseudoaleatorios
             var random = new Random();
+            
             return new string(Enumerable.Repeat(caracteres, longitud)
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
