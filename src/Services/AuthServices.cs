@@ -150,6 +150,8 @@ namespace La_Divine.Src.Services
 
             if (!int.TryParse(cuerpo, out int rutNumerico)) return -2;
 
+            if (rutNumerico < 1000000) return -2;
+
             // Acumulador para la suma
             int suma = 0;
             
