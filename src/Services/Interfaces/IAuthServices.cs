@@ -16,5 +16,11 @@ namespace La_Divine.Src.Services.Interfaces
         /// Valida las credenciales de un usuario y genera un token JWT para su sesión.
         /// </summary>
         Task<string> IniciarSesionAsync(LoginUserDto loginUserDto);
+
+
+        /// <summary>
+        /// Gestiona el cambio de contraseña de un usuario validando su identidad y su clave actual.
+        /// </summary>
+        Task<(bool Success, string Message)> ChangePassword(int userId, ChangePasswordDto dto);
     }
 }
