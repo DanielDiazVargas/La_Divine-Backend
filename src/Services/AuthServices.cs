@@ -131,6 +131,74 @@ namespace La_Divine.Src.Services
             return GenerateToken.CreateToken(usuario, _config);
         }
 
+        // Método encargado de actualizar la contraseña del usuario.
+        public async Task<(bool Success, string Message)> ChangePassword(int userId, ChangePasswordDto dto)
+        {
+            try
+            {
+      
+
+                // Buscar usuario por Id.
+                var user = await _contextDb.Users.FindAsync(userId);
+
+                // Validar existencia del usuario.
+                if (user == null)
+                    return (false, "El usuario no existe");
+
+                // Validar contraseña actual.
+                if (string.IsNullOrWhiteSpace(dto.ContrasenaActual))
+                    return (false, "Debe ingresar la contraseña actual");
+
+                // Validar nueva contraseña.
+                if (string.IsNullOrWhiteSpace(dto.NuevaContrasena))
+                    return (false, "Debe ingresar una nueva contraseña");
+
+                // Validar confirmación.
+                if (string.IsNullOrWhiteSpace(dto.ConfirmarContrasena))
+                    return (false, "Debe confirmar la nueva contraseña");
+
+                // Eliminar espacios innecesarios.
+                dto.NuevaContrasena = dto.NuevaContrasena.Trim();
+
+                // Validar longitud mínima.
+                // Esta validación ahora ocurre ANTES de revisar
+                // la contraseña actual para facilitar pruebas
+                // y mejorar experiencia de usuario.
+                if (dto.NuevaContrasena.Length < 8)
+                    return (false, "La nueva contraseña debe tener al menos 8 caracteres");
+
+                // Validar longitud máxima.
+                // Esto evita inputs extremadamente grandes.
+                if (dto.NuevaContrasena.Length > 100)
+                    return (false, "La contraseña excede el largo permitido");
+
+                // Verificar coincidencia entre nueva contraseña
+                // y confirmación.
+                if (dto.NuevaContrasena != dto.ConfirmarContrasena)
+                    return (false, "Las contraseñas no coinciden");
+
+                // Verificar contraseña actual usando BCrypt.
+                // BCrypt compara el texto ingresado
+                // contra el hash almacenado en DB.
+                if (!BCrypt.Net.BCrypt.Verify(dto.ContrasenaActual, user.Password))
+                    return (false, "La contraseña actual es incorrecta");
+
+                // Generar nuevo hash seguro.
+                user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NuevaContrasena);
+
+                // Guardar cambios en base de datos.
+                await _contextDb.SaveChangesAsync();
+
+                // Respuesta exitosa.
+                return (true, "Contraseña actualizada correctamente");
+            }
+                catch (Exception ex)
+                {
+                    // Captura errores inesperados.
+                    return (false, $"Error al cambiar la contraseña: {ex.Message}");
+                }
+        }   
+
         /// <summary>
         /// Método privado que implementa el algoritmo del módulo 11 para validar el RUT chileno.
         /// Retorna 0 si es válido, -1 si tiene mal formato y -2 si la estructura matemática falla.
