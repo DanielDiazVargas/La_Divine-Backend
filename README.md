@@ -79,7 +79,8 @@ Ejemplo de uso en CSS:
 ## 💻 Estándares de programación
 
 ### 🔹 Idioma
-* **Código Fuente:** En **Inglés** (componentes, hooks, variables, rutas).
+* **Código Fuente:** En **Inglés** (componentes, hooks, variables, rutas).  
+  > ⚠️ Se reconoce que existen algunos deslices puntuales en español dentro del código fuente (principalmente en nombres de DTOs y métodos del backend), los cuales no afectan el funcionamiento del sistema y serán corregidos en futuras iteraciones.
 * **Documentación:** El README.md y comentarios en **Español**.
 
 ### 🔹 Nombres
