@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using La_Divine.Src.Db;
 using La_Divine.Src.Dtos.Users;
+using La_Divine.Src.Services.Interfaces;
 using System.Security.Claims;
 
 namespace La_Divine.Src.Controller
@@ -18,10 +19,12 @@ namespace La_Divine.Src.Controller
     public class UserController : ControllerBase
     {
         private readonly ContextDb _context;
+        private readonly IAuthServices _authServices;
 
-        public UserController(ContextDb context)
+        public UserController(ContextDb context, IAuthServices authServices)
         {
             _context = context;
+            _authServices = authServices;
         }
 
         /// <summary>
@@ -122,7 +125,7 @@ namespace La_Divine.Src.Controller
                 int userId = int.Parse(idClaim);
 
                 // 2. Le pasamos el ID y el DTO al servicio
-                var result = await _authServices.CambiarContrasena(userId, dto);
+                var result = await _authServices.ChangePassword(userId, dto);
 
                 if (!result.Success)
                 {
@@ -147,15 +150,6 @@ namespace La_Divine.Src.Controller
                         message = $"Error al cambiar la contraseña: {ex.Message}"
                     });
                 }
-        }
-
-        /// <summary>
-        /// Objeto de transferencia de datos (DTO) utilizado para procesar la actualización de la contraseña del usuario.
-        /// </summary>
-        public class ChangePasswordDto
-        {
-            public string Actual { get; set; } = string.Empty;
-            public string Nueva { get; set; } = string.Empty;
         }
     }
 }

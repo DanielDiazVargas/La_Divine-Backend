@@ -139,7 +139,7 @@ namespace La_Divine.Src.Services
       
 
                 // Buscar usuario por Id.
-                var user = await _contextDb.Users.FindAsync(userId);
+                var user = await _context.Users.FindAsync(userId);
 
                 // Validar existencia del usuario.
                 if (user == null)
@@ -187,7 +187,7 @@ namespace La_Divine.Src.Services
                 user.Password = BCrypt.Net.BCrypt.HashPassword(dto.NuevaContrasena);
 
                 // Guardar cambios en base de datos.
-                await _contextDb.SaveChangesAsync();
+                await _context.SaveChangesAsync();
 
                 // Respuesta exitosa.
                 return (true, "Contraseña actualizada correctamente");
