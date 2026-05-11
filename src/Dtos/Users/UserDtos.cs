@@ -36,4 +36,25 @@ namespace La_Divine.Src.Dtos.Users
         public bool Status { get; set; }
         public string RoleName { get; set; } = string.Empty; 
     }
+
+    /// <summary>
+    /// Objeto de transferencia de datos (DTO) utilizado para procesar la actualización de la contraseña del usuario.
+    /// </summary>
+    public class ChangePasswordDto
+    {
+        // TODO:
+        // Este UserId es temporal.
+        // Cuando el frontend implemente JWT correctamente,
+        // el usuario deberá obtenerse desde el token.
+        public int UserId { get; set; }
+
+        // Contraseña actual ingresada por el usuario.
+        public string ContrasenaActual { get; set; } = string.Empty;
+
+        // Nueva contraseña que desea utilizar.
+        public string NuevaContrasena { get; set; } = string.Empty;
+
+        // Confirmación de la nueva contraseña.
+        public string ConfirmarContrasena { get; set; } = string.Empty;
+    }
 }

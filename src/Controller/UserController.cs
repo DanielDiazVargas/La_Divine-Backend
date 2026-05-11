@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using La_Divine.Src.Db;
 using La_Divine.Src.Dtos.Users;
+using La_Divine.Src.Services.Interfaces;
 using System.Security.Claims;
 
 namespace La_Divine.Src.Controller
@@ -18,10 +19,12 @@ namespace La_Divine.Src.Controller
     public class UserController : ControllerBase
     {
         private readonly ContextDb _context;
+        private readonly IAuthServices _authServices;
 
-        public UserController(ContextDb context)
+        public UserController(ContextDb context, IAuthServices authServices)
         {
             _context = context;
+            _authServices = authServices;
         }
 
         /// <summary>
@@ -106,35 +109,47 @@ namespace La_Divine.Src.Controller
         /// Permite al usuario autenticado cambiar su propia contraseña.
         /// Verifica matemáticamente que la contraseña actual sea correcta antes de aplicar el hash a la nueva.
         /// </summary>
-        [HttpPut("cambiar-contrasena")]
+        
+        
+        [HttpPost("cambiar-contrasena")]
+        [Authorize] // Asegúrate de que tenga esto para requerir el token
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
-            // Identificador numérico del usuario extraído de los claims del token
-            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
-            if (idClaim == null) return Unauthorized();
+            try
+            {
+                // 1. Extraemos el ID del usuario desde el token JWT
+                var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+                if (idClaim == null) return Unauthorized(new { success = false, message = "No autorizado" });
 
-            // Entidad del usuario que solicita el cambio de credenciales
-            var user = await _context.Users.FindAsync(int.Parse(idClaim));
-            
-            if (user == null) return NotFound();
+                int userId = int.Parse(idClaim);
 
-            if (!BCrypt.Net.BCrypt.Verify(dto.Actual, user.Password))
-                return BadRequest(new { mensaje = "La contraseña actual es incorrecta." });
+                // 2. Le pasamos el ID y el DTO al servicio
+                var result = await _authServices.ChangePassword(userId, dto);
 
-            user.Password = BCrypt.Net.BCrypt.HashPassword(dto.Nueva);
-            await _context.SaveChangesAsync();
+                if (!result.Success)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = result.Message
+                    });
+                }
 
-            return Ok(new { mensaje = "Contraseña actualizada correctamente." });
+                return Ok(new
+                {
+                    success = true,
+                    message = result.Message
+                });
+            }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new
+                    {
+                        success = false,
+                        message = $"Error al cambiar la contraseña: {ex.Message}"
+                    });
+                }
         }
-    }
-
-    /// <summary>
-    /// Objeto de transferencia de datos (DTO) utilizado para procesar la actualización de la contraseña del usuario.
-    /// </summary>
-    public class ChangePasswordDto
-    {
-        public string Actual { get; set; } = string.Empty;
-        public string Nueva { get; set; } = string.Empty;
     }
 }
