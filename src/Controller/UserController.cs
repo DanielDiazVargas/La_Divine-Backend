@@ -70,6 +70,7 @@ namespace La_Divine.Src.Controller
             // Lista de usuarios proyectada de forma segura hacia el DTO correspondiente
             var users = await _context.Users
                 .Include(u => u.Role)
+                .Where(u => u.Role.Name == "User")
                 .Select(u => new UserListDto
                 {
                     Id = u.Id,
