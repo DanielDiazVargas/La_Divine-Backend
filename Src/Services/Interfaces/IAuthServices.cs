@@ -1,23 +1,26 @@
 using La_Divine.Src.Dtos.Users;
 
-namespace La_Divine.Src.Services.interfaces;
-
-/// <summary>
-/// Interfaz encargada de definir los métodos
-/// relacionados con la autenticación.
-/// </summary>
-public interface IAuthServices {
-
+namespace La_Divine.Src.Services.Interfaces
+{
     /// <summary>
-    /// Valida las credenciales del usuario
-    /// e inicia sesión en el sistema.
+    /// Interfaz que define los contratos para el servicio de autenticación.
     /// </summary>
-    /// <param name="loginDto">
-    /// Datos ingresados por el usuario para el login.
-    /// </param>
-    /// <returns>
-    /// Retorna una respuesta indicando si
-    /// el login fue exitoso o no.
-    /// </returns>
-    Task<LoginResponse> Login(LoginDto loginDto);
+    public interface IAuthServices
+    {
+        /// <summary>
+        /// Registra un nuevo cliente en el sistema y le asigna una contraseña temporal.
+        /// </summary>
+        Task<UserResponseDto> RegistrarClienteAsync(CreateUserDto createUserDto);
+
+        /// <summary>
+        /// Valida las credenciales de un usuario y genera un token JWT para su sesión.
+        /// </summary>
+        Task<string> IniciarSesionAsync(LoginUserDto loginUserDto);
+
+
+        /// <summary>
+        /// Gestiona el cambio de contraseña de un usuario validando su identidad y su clave actual.
+        /// </summary>
+        Task<(bool Success, string Message)> ChangePassword(int userId, ChangePasswordDto dto);
+    }
 }
