@@ -1,65 +1,28 @@
 namespace La_Divine.Src.Model;
 
 /// <summary>
-/// Representa un usuario del sistema.
+/// Entidad principal que representa a un usuario registrado en la plataforma del teatro.
+/// Gestiona tanto la información personal como las credenciales de acceso y su nivel de permisos.
 /// </summary>
-/// <remarks>
-/// Puede corresponder a un administrador
-/// o un cliente.
-/// </remarks>
 public class User {
-
-    /// <summary>
-    /// Id único del usuario.
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
-    /// Nombre del usuario.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Apellido del usuario.
-    /// </summary>
-    public string LastName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Correo electrónico del usuario.
-    /// </summary>
-    public string Email { get; set; } = string.Empty;
-
-    /// <summary>
-    /// RUT del usuario.
-    /// </summary>
-    public string Rut { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Número telefónico del usuario.
-    /// </summary>
-    public string Phone { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Contraseña encriptada del usuario.
-    /// </summary>
-    public string Password { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Estado del usuario.
-    /// </summary>
-    /// <remarks>
-    /// True = habilitado
-    /// False = deshabilitado
-    /// </remarks>
-    public bool Status { get; set; }
-
-    /// <summary>
-    /// Rol asociado al usuario.
-    /// </summary>
+    public int Id{get;set;}
+    public string Name{get;set;} = string.Empty;
+    public string LastName{get;set;} = string.Empty;
+    public string Email{get;set;} = string.Empty;
+    
+    // Documento de identidad (formato sin puntos ni guion)
+    public string Rut {get;set;} = string.Empty;
+    public string Phone {get;set;} = string.Empty;
+    
+    // Contraseña encriptada de forma segura utilizando BCrypt
+    public string Password {get;set;} = string.Empty;
+    
+    // Indica si el usuario tiene permitido iniciar sesión en el sistema
+    public bool Status {get;set;}
+    
+    // Entidad de navegación hacia el rol del usuario
     public Role Role { get; set; } = null!;
-
-    /// <summary>
-    /// Id del rol asociado.
-    /// </summary>
+    
+    // Clave foránea que vincula al usuario con un rol específico
     public int RoleId { get; set; }
 }

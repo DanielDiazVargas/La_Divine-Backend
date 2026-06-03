@@ -1,48 +1,45 @@
-namespace La_Divine.Src.Model;
+namespace La_Divine.Src.Db;
 
 using Microsoft.EntityFrameworkCore;
-
+using La_Divine.Src.Model;
+ 
 /// <summary>
-/// Contexto de la base de datos del sistema.
+/// Contexto principal de la base de datos utilizando Entity Framework Core.
+/// Gestiona la conexión a la base de datos y mapea las clases del modelo a las tablas correspondientes.
 /// </summary>
-/// <remarks>
-/// Esta clase se encarga de conectar las entidades
-/// del sistema con Entity Framework.
-/// </remarks>
 public class ContextDb(DbContextOptions<ContextDb> options) : DbContext(options) {
-
+    
     /// <summary>
-    /// Tabla de usuarios.
+    /// Representa la tabla de Usuarios en la base de datos.
     /// </summary>
     public DbSet<User> Users { get; set; } = null!;
-
+    
     /// <summary>
-    /// Tabla de roles.
+    /// Representa la tabla de Roles (Admin, User, etc.) en la base de datos.
     /// </summary>
     public DbSet<Role> Roles { get; set; } = null!;
+    
+    /// <summary>
+    /// Representa la tabla de Funciones teatrales en la base de datos.
+    /// </summary>
+    public DbSet<Function> Functions { get; set; } = null!;
 
     /// <summary>
-    /// Configuración de relaciones entre entidades.
+    /// Configura las relaciones y restricciones de las tablas mediante Fluent API al momento de crear el modelo.
     /// </summary>
-    /// <param name="modelBuilder">
-    /// Constructor utilizado por Entity Framework
-    /// para configurar el modelo de datos.
-    /// </param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Relación entre User y Role
-        // Un usuario tiene un rol
-        // Un rol puede tener muchos usuarios
+        // Relación de Uno a Muchos: Un Rol puede tener muchos Usuarios, pero un Usuario tiene solo un Rol.
         modelBuilder.Entity<User>()
             .HasOne(u => u.Role)
             .WithMany(r => r.Users)
             .HasForeignKey(u => u.RoleId);
 
         modelBuilder.Entity<Role>()
-            .HasMany(u => u.Users)
-            .WithOne(r => r.Role)
-            .HasForeignKey(u => u.RoleId);
+            .HasMany(u=>u.Users)
+            .WithOne(r=>r.Role)
+            .HasForeignKey(u=>u.RoleId);
     }
 }

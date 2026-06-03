@@ -1,56 +1,62 @@
-using Microsoft.AspNetCore.Mvc;
 using La_Divine.Src.Dtos.Users;
-using La_Divine.Src.Services.interfaces;
+using La_Divine.Src.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
-namespace La_Divine.Src.Controller;
-
-/// <summary>
-/// Controlador encargado del login de usuarios.
-/// </summary>
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController(IAuthServices authServices) : ControllerBase {
-
+namespace La_Divine.Src.Controller
+{
     /// <summary>
-    /// Servicio utilizado para la autenticación.
+    /// Controlador encargado de gestionar la autenticación de usuarios.
+    /// Proporciona los endpoints para el registro de nuevos clientes y el inicio de sesión.
     /// </summary>
-    private readonly IAuthServices _authServices = authServices;
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController : ControllerBase
+    {
+        private readonly IAuthServices _authServices;
 
-    /// <summary>
-    /// Permite iniciar sesión usando correo y contraseña.
-    /// </summary>
-    /// <param name="loginDto">
-    /// Datos ingresados por el usuario para el login.
-    /// </param>
-    /// <returns>
-    /// Retorna un OK si el login es correcto,
-    /// un BadRequest si las credenciales son incorrectas
-    /// o un error 500 si ocurre un problema inesperado.
-    /// </returns>
-    [HttpPost("")]
-    public async Task<IActionResult> Login([FromBody] LoginDto loginDto) {
+        public AuthController(IAuthServices authServices)
+        {
+            _authServices = authServices;
+        }
 
-        try {
+        /// <summary>
+        /// Registra un nuevo usuario en el sistema.
+        /// Recibe los datos del usuario, verifica que no existan duplicados y delega la creación al servicio correspondiente.
+        /// </summary>
+        [HttpPost("registrar")]
+        public async Task<IActionResult> Registrar([FromBody] CreateUserDto createUserDto)
+        {
+            try
+            {
+                // Resultado de la creación del usuario desde el servicio
+                var resultado = await _authServices.RegistrarClienteAsync(createUserDto);
 
-            // Se llama al servicio de autenticación
-            var response = await _authServices.Login(loginDto);
-
-            // Si el login falla, retorna un BadRequest
-            if (!response.Success) {
-                return BadRequest(response);
+                return Created("", resultado); 
             }
+            catch (Exception ex)
+            {
+                return BadRequest(new { mensaje = ex.Message });
+            }
+        }
 
-            // Login exitoso
-            return Ok(response);
-
-        } catch(Exception ex) {
-
-            // Manejo de errores inesperados
-            return StatusCode(500, new LoginResponse {
-                Success = false,
-                Message = $"Error durante el login: {ex.Message}",
-                Data = null
-            });
-        }   
-    }    
+        /// <summary>
+        /// Inicia sesión en el sistema.
+        /// Verifica las credenciales del usuario y, si son válidas, genera y retorna un token JWT.
+        /// </summary>
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginUserDto loginUserDto)
+        {
+            try
+            {
+                // Token JWT generado para el usuario autenticado
+                var token = await _authServices.IniciarSesionAsync(loginUserDto);
+                
+                return Ok(new { token });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { mensaje = ex.Message });
+            }
+        }
+    }
 }

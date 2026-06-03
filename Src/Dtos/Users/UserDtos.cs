@@ -1,76 +1,60 @@
-namespace La_Divine.Src.Dtos.Users;
-
-/// <summary>
-/// DTO utilizado para recibir los datos
-/// del inicio de sesión.
-/// </summary>
-public class LoginDto {
+namespace La_Divine.Src.Dtos.Users
+{
+    /// <summary>
+    /// DTO que recopila los datos ingresados por un cliente nuevo durante su proceso de registro en el sistema.
+    /// </summary>
+    public class CreateUserDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Rut { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+    }
 
     /// <summary>
-    /// Correo electrónico del usuario.
+    /// DTO encargado de transportar de forma temporal las credenciales de un usuario al intentar iniciar sesión.
     /// </summary>
-    public string Email { get; set; } = string.Empty;
+    public class LoginUserDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
 
     /// <summary>
-    /// Contraseña ingresada por el usuario.
+    /// DTO seguro de salida para enviar la información del perfil del usuario al frontend.
+    /// Excluye información sensible como la contraseña e incluye información procesada como el nombre del Rol.
     /// </summary>
-    public string Password { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Datos retornados cuando el login
-/// se realiza correctamente.
-/// </summary>
-public class DataResponseLogin {
+    public class UserResponseDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Rut { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool Status { get; set; }
+        public string RoleName { get; set; } = string.Empty; 
+    }
 
     /// <summary>
-    /// Token JWT generado para la sesión.
+    /// Objeto de transferencia de datos (DTO) utilizado para procesar la actualización de la contraseña del usuario.
     /// </summary>
-    public string Token { get; set; } = string.Empty;
+    public class ChangePasswordDto
+    {
+        // TODO:
+        // Este UserId es temporal.
+        // Cuando el frontend implemente JWT correctamente,
+        // el usuario deberá obtenerse desde el token.
+        public int UserId { get; set; }
 
-    /// <summary>
-    /// Id del usuario autenticado.
-    /// </summary>
-    public int UserId { get; set; }
+        // Contraseña actual ingresada por el usuario.
+        public string ContrasenaActual { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Nombre del usuario.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
+        // Nueva contraseña que desea utilizar.
+        public string NuevaContrasena { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Apellido del usuario.
-    /// </summary>
-    public string LastName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Correo electrónico del usuario.
-    /// </summary>
-    public string Email { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Rol asignado al usuario.
-    /// </summary>
-    public string Role { get; set; } = string.Empty;
-}
-
-/// <summary>
-/// Respuesta general del proceso de login.
-/// </summary>
-public class LoginResponse {
-
-    /// <summary>
-    /// Indica si el login fue exitoso.
-    /// </summary>
-    public bool Success { get; set; }
-
-    /// <summary>
-    /// Mensaje de respuesta del sistema.
-    /// </summary>
-    public string Message { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Datos del usuario autenticado.
-    /// </summary>
-    public DataResponseLogin? Data { get; set; }
+        // Confirmación de la nueva contraseña.
+        public string ConfirmarContrasena { get; set; } = string.Empty;
+    }
 }

@@ -1,29 +1,14 @@
 namespace La_Divine.Src.Model;
 
 /// <summary>
-/// Representa un rol dentro del sistema.
+/// Entidad que define los niveles de acceso y permisos dentro del sistema (ej. Admin, User).
 /// </summary>
-/// <remarks>
-/// Los roles permiten controlar los permisos
-/// y accesos de los usuarios.
-/// </remarks>
 public class Role() {
-
-    /// <summary>
-    /// Id único del rol.
-    /// </summary>
     public int Id { get; set; }
-
-    /// <summary>
-    /// Nombre del rol.
-    /// </summary>
-    /// <example>
-    /// Admin, User
-    /// </example>
+    
+    // Nombre descriptivo del rol
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Lista de usuarios asociados al rol.
-    /// </summary>
+    
+    // Colección de usuarios que poseen este rol específico
     public ICollection<User> Users { get; set; } = [];
 }
