@@ -4,7 +4,7 @@ using La_Divine.Src.Dtos.Function;
 using La_Divine.Src.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-// AUN NO IMPLEMENTADA (PARA SIGUIENTES ITERACIONES.)
+
 /// <summary>
 /// Controlador encargado de gestionar las obras de teatro.
 /// Permite a los administradores crear nuevas funciones y subirlas a la cartelera.
