@@ -28,6 +28,8 @@ builder.Services.AddScoped<IAuthServices, AuthServices>();
 
 builder.Services.AddScoped<ISendGridEmailServices, SendGridEmailServices>();
 
+builder.Services.AddScoped<IReservationServices, ReservationServices>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

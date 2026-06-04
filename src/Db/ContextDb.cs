@@ -25,6 +25,16 @@ public class ContextDb(DbContextOptions<ContextDb> options) : DbContext(options)
     public DbSet<Function> Functions { get; set; } = null!;
 
     /// <summary>
+    /// Tabla de asientos del teatro
+    /// <summary>
+    public DbSet<Seat> Seats { get; set; } = null!;
+ 
+    /// <summary> 
+    /// Tabla de reservas realizadas por los clientes
+    /// <summary>
+    public DbSet<Reservation> Reservations { get; set; } = null!;
+
+    /// <summary>
     /// Configura las relaciones y restricciones de las tablas mediante Fluent API al momento de crear el modelo.
     /// </summary>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -41,5 +51,30 @@ public class ContextDb(DbContextOptions<ContextDb> options) : DbContext(options)
             .HasMany(u=>u.Users)
             .WithOne(r=>r.Role)
             .HasForeignKey(u=>u.RoleId);
+
+        // Cada asiento pertenece a una función; si se elimina la función, se eliminan sus asientos
+        modelBuilder.Entity<Seat>()
+            .HasOne(s => s.Function)
+            .WithMany()
+            .HasForeignKey(s => s.FunctionId)
+            .OnDelete(DeleteBehavior.Cascade);
+ 
+        // Cada reserva pertenece a un cliente
+        modelBuilder.Entity<Reservation>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId);
+ 
+        // Cada reserva está asociada a una función
+        modelBuilder.Entity<Reservation>()
+            .HasOne(r => r.Function)
+            .WithMany()
+            .HasForeignKey(r => r.FunctionId);
+ 
+        // Una reserva puede tener muchos asientos y un asiento puede estar en muchas reservas
+        modelBuilder.Entity<Reservation>()
+            .HasMany(r => r.SelectedSeats)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("ReservationSeats"));
     }
 }
