@@ -45,6 +45,8 @@ namespace La_Divine.Src.Services
                 throw new Exception("El RUT Ingresado no es válido.");
             }
 
+            // Convierte el email en minusculas antes de verificar duplicados
+            var normalizedEmail = createUserDto.Email.ToLower().Trim();
             // Bandera booleana que verifica si el correo ya está registrado en la base de datos
             var existeCorreo = await _context.Users.AnyAsync(u => u.Email == createUserDto.Email);
             if (existeCorreo)
@@ -72,9 +74,10 @@ namespace La_Divine.Src.Services
             // Entidad del nuevo usuario construida con los datos validados y la contraseña hasheada
             var nuevoUsuario = new User
             {
+                
                 Name = createUserDto.Name,
                 LastName = createUserDto.LastName,
-                Email = createUserDto.Email,
+                Email = createUserDto.Email.ToLower().Trim(),
                 Rut = createUserDto.Rut,
                 Phone = createUserDto.Phone,
                 Password = BCrypt.Net.BCrypt.HashPassword(passwordTemporal),
@@ -110,10 +113,13 @@ namespace La_Divine.Src.Services
         /// </summary>
         public async Task<string> IniciarSesionAsync(LoginUserDto loginUserDto)
         {
+            // Convierte el mail en minusculas antes de comparar
+            var normalizedEmail = loginUserDto.Email.ToLower().Trim();
+
             // Buscamos al usuario por correo
             var usuario = await _context.Users
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Email == loginUserDto.Email);
+                .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
 
             // Validamos que el usuario exista y la clave sea correcta
             if (usuario == null || !BCrypt.Net.BCrypt.Verify(loginUserDto.Password, usuario.Password))
