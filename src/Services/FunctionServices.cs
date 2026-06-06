@@ -76,7 +76,6 @@ public class FunctionServices(
                 Description = request.Description,
                 DateFunction = request.DateFunction,
                 TimeFunction = request.TimeFunction,
-                BasePrice = request.BasePrice,
                 State = true,
                 Image = responseImageUrl,
                 ValidateFunction = functionUuid.ToString("N")
@@ -215,7 +214,7 @@ public class FunctionServices(
                         TimeFunction = theaterFunction.TimeFunction,
                         ImageUrl = theaterFunction.Image ?? string.Empty,
 
-                        BasePrice = theaterFunction.BasePrice,
+                        BasePrice = hasSeatStats ? stats!.BasePrice : 0,
 
                         // Si aún no se generaron asientos para la función, se muestra 0 disponible.
                         AvailableSeats = hasSeatStats ? stats!.AvailableSeats : 0,
@@ -316,7 +315,6 @@ public class FunctionServices(
                 Description = f.Description,
                 DateFunction = f.DateFunction,
                 TimeFunction = f.TimeFunction,
-                BasePrice = f.BasePrice,
                 State = f.State,
                 ImageUrl = f.Image ?? string.Empty
             })

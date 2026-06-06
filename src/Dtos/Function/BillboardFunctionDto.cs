@@ -16,11 +16,12 @@ public class BillboardFunctionDto
 
     public string TimeFunction { get; set; } = string.Empty;
 
-    public decimal BasePrice { get; set; }
-
     public int AvailableSeats { get; set; }
 
     public int TotalSeats { get; set; }
+
+    // Precio mínimo de los asientos generados para la función
+    public decimal BasePrice { get; set; }
 
     public string ImageUrl { get; set; } = string.Empty;
 }
