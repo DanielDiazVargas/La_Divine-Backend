@@ -11,6 +11,8 @@ public class CreateFunction
     public string DateFunction {get;set;} = null!;
     public string TimeFunction {get;set;} = null!;
     public IFormFile? Image {get;set;} 
+    public decimal BasePrice { get; set; }
+
 }
 
 /// <summary>
@@ -26,6 +28,8 @@ public class CreateFunctionData
     public string TimeFunction {get;set;} = null!;
     public bool State {get;set;}
     public string ImageUrl {get;set;} = null!;
+    public decimal BasePrice { get; set; }
+
 }
 
 /// <summary>

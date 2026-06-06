@@ -17,4 +17,7 @@ public interface IFunctionServices
     /// Permite aplicar filtros por nombre de obra y fecha.
     /// </summary>
     Task<BillboardFunctionResponse> GetBillboardFunctionsAsync(string? name, string? date);
+
+    Task<List<CreateFunctionData>> GetAllFunctionsAsync();
+
 }

@@ -37,6 +37,20 @@ public class FunctionServices(
 
         try
         {
+
+            // Validación ERS: no puede haber dos funciones el mismo día
+            var existeEnMismaFecha = await _contextDb.Functions
+                .AnyAsync(f => f.DateFunction == request.DateFunction);
+            if (existeEnMismaFecha)
+            {
+                return new CreateFunctionResponse
+                {
+                    Message = "Ya existe una función registrada para este día",
+                    Success = false,
+                    Data = null!
+                };
+            }
+
             if (request.Image != null)
             {
                 // Sube la imagen del afiche a Cloudinary dentro de la carpeta de funciones.
@@ -62,7 +76,8 @@ public class FunctionServices(
                 Description = request.Description,
                 DateFunction = request.DateFunction,
                 TimeFunction = request.TimeFunction,
-                State = false,
+                BasePrice = request.BasePrice,
+                State = true,
                 Image = responseImageUrl,
                 ValidateFunction = functionUuid.ToString("N")
             };
@@ -70,37 +85,11 @@ public class FunctionServices(
             await _contextDb.Functions.AddAsync(function);
             await _contextDb.SaveChangesAsync();
 
-            // Correo del administrador configurado en appsettings.
-            string adminEmail = _configuration["TeatroConfig:AdminEmail"] ?? "admin@teatroladivine.cl";
-
-            // Envía correo de validación asociado a la nueva función creada.
-            var response = await _sendGridEmailServices.SendEmailAsync(
-                adminEmail,
-                "Validación de nueva función",
-                function.Name,
-                function.ValidateFunction
-            );
-
-            if (!response)
-            {
-                Console.WriteLine("Error al enviar el correo electrónico de validación");
-
-                return new CreateFunctionResponse
-                {
-                    Message = "Función creada, pero error al enviar el correo electrónico de validación",
-                    Success = true,
-                    Data = new CreateFunctionData
-                    {
-                        Id = function.Id,
-                        Name = function.Name,
-                        Description = function.Description,
-                        DateFunction = function.DateFunction,
-                        TimeFunction = function.TimeFunction,
-                        State = function.State,
-                        ImageUrl = function.Image ?? string.Empty
-                    }
-                };
-            }
+            // Genera automáticamente los asientos de la función, por sección,
+            // con los precios fijos del mapa del teatro (Figura 1).
+            var seats = GenerateSeatsForFunction(function.Id);
+            await _contextDb.Seats.AddRangeAsync(seats);
+            await _contextDb.SaveChangesAsync();
 
             return new CreateFunctionResponse
             {
@@ -226,9 +215,7 @@ public class FunctionServices(
                         TimeFunction = theaterFunction.TimeFunction,
                         ImageUrl = theaterFunction.Image ?? string.Empty,
 
-                        // Si la función tiene asientos asociados, se usa el precio mínimo real.
-                        // Si aún no tiene asientos, se muestra 0 como valor temporal.
-                        BasePrice = hasSeatStats ? stats!.BasePrice : 0,
+                        BasePrice = theaterFunction.BasePrice,
 
                         // Si aún no se generaron asientos para la función, se muestra 0 disponible.
                         AvailableSeats = hasSeatStats ? stats!.AvailableSeats : 0,
@@ -257,5 +244,82 @@ public class FunctionServices(
                 Data = []
             };
         }
+    }
+
+    /// <summary>
+    /// Genera todos los asientos de una función según el mapa del teatro (Figura 1).
+    /// Los IDs (SeatNumber) coinciden EXACTAMENTE con los del mapa visual del frontend,
+    /// para que la selección y la reserva (FUN-003) funcionen.
+    /// </summary>
+    private static List<Seat> GenerateSeatsForFunction(int functionId)
+    {
+        var seats = new List<Seat>();
+
+        // VIP Divine — $85.000 — filas A-E
+        AddSection(seats, functionId, "VIP Divine", 85000m, "",
+            new[] { ("A", 8), ("B", 9), ("C", 10), ("D", 11), ("E", 12) });
+
+        // Platea — $45.000 — filas F-K
+        AddSection(seats, functionId, "Platea", 45000m, "",
+            new[] { ("F", 14), ("G", 15), ("H", 16), ("I", 17), ("J", 18), ("K", 19) });
+
+        // Anfiteatro — $28.000 — filas L-Q
+        AddSection(seats, functionId, "Anfiteatro", 28000m, "",
+            new[] { ("L", 16), ("M", 18), ("N", 20), ("O", 22), ("P", 24), ("Q", 26) });
+
+        // Galería — $18.000 — filas R-T
+        AddSection(seats, functionId, "Galería", 18000m, "",
+            new[] { ("R", 26), ("S", 28), ("T", 30) });
+
+        // Palco Izquierdo — $65.000 — prefijo "IZQ-"
+        AddSection(seats, functionId, "Palco", 65000m, "IZQ-",
+            new[] { ("A", 4), ("B", 4), ("C", 5), ("D", 5), ("E", 6), ("F", 6), ("G", 7), ("H", 7) });
+
+        // Palco Derecho — $65.000 — prefijo "DER-"
+        AddSection(seats, functionId, "Palco", 65000m, "DER-",
+            new[] { ("A", 4), ("B", 4), ("C", 5), ("D", 5), ("E", 6), ("F", 6), ("G", 7), ("H", 7) });
+
+        return seats;
+    }
+
+    /// <summary>
+    /// Crea los asientos de una sección, fila por fila, con su precio fijo.
+    /// </summary>
+    private static void AddSection(
+        List<Seat> seats, int functionId, string section, decimal price,
+        string prefix, (string Row, int Count)[] rows)
+    {
+        foreach (var (row, count) in rows)
+        {
+            for (int num = 1; num <= count; num++)
+            {
+                seats.Add(new Seat
+                {
+                    SeatNumber = $"{prefix}{row}{num}",
+                    Section = section,
+                    Price = price,
+                    Status = 0, // 0 = Disponible
+                    FunctionId = functionId
+                });
+            }
+        }
+    }
+
+    public async Task<List<CreateFunctionData>> GetAllFunctionsAsync()
+    {
+        return await _contextDb.Functions
+            .OrderByDescending(f => f.DateFunction)
+            .Select(f => new CreateFunctionData
+            {
+                Id = f.Id,
+                Name = f.Name,
+                Description = f.Description,
+                DateFunction = f.DateFunction,
+                TimeFunction = f.TimeFunction,
+                BasePrice = f.BasePrice,
+                State = f.State,
+                ImageUrl = f.Image ?? string.Empty
+            })
+        .ToListAsync();
     }
 }

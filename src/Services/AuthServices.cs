@@ -48,7 +48,7 @@ namespace La_Divine.Src.Services
             // Convierte el email en minusculas antes de verificar duplicados
             var normalizedEmail = createUserDto.Email.ToLower().Trim();
             // Bandera booleana que verifica si el correo ya está registrado en la base de datos
-            var existeCorreo = await _context.Users.AnyAsync(u => u.Email == createUserDto.Email);
+            var existeCorreo = await _context.Users.AnyAsync(u => u.Email == normalizedEmail);
             if (existeCorreo)
             {
                 throw new Exception("El correo electrónico ingresado ya se encuentra registrado");
