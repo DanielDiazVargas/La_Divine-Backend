@@ -47,11 +47,6 @@ public class ContextDb(DbContextOptions<ContextDb> options) : DbContext(options)
             .WithMany(r => r.Users)
             .HasForeignKey(u => u.RoleId);
 
-        modelBuilder.Entity<Role>()
-            .HasMany(u=>u.Users)
-            .WithOne(r=>r.Role)
-            .HasForeignKey(u=>u.RoleId);
-
         // Cada asiento pertenece a una función; si se elimina la función, se eliminan sus asientos
         modelBuilder.Entity<Seat>()
             .HasOne(s => s.Function)
