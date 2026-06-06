@@ -30,6 +30,9 @@ namespace backend.Src.Db.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("numeric");
+
                     b.Property<string>("DateFunction")
                         .IsRequired()
                         .HasColumnType("text");

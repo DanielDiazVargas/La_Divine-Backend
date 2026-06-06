@@ -4,10 +4,7 @@ using La_Divine.Src.Dtos.Function;
 using La_Divine.Src.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-/// <summary>
-/// Controlador encargado de gestionar las funciones teatrales.
-/// Permite crear funciones y consultar la cartelera disponible.
-/// </summary>
+
 [ApiController]
 [Route("api/[controller]")]
 public class FunctionController : ControllerBase
@@ -21,29 +18,37 @@ public class FunctionController : ControllerBase
 
     /// <summary>
     /// Crea una nueva función en el sistema.
-    /// Recibe un formulario con los datos de la obra, incluyendo el archivo de imagen del afiche.
     /// Solo accesible por usuarios con el rol de "Admin".
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromForm] CreateFunction dto)
     {
-        // Objeto que contiene el estado de la creación y los datos de la nueva función.
         var result = await _functionServices.CreateFunctionAsync(dto);
-
         return Ok(result);
     }
 
     /// <summary>
-    /// Consulta las funciones vigentes disponibles en cartelera.
-    /// Permite filtrar por nombre de obra y fecha.
-    /// Solo accesible para usuarios con rol "User".
+    /// Lista todas las funciones registradas (incluyendo pendientes).
+    /// Solo accesible por Admin, para el panel de administración.
+    /// </summary>
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAllFunctions()
+    {
+        var functions = await _functionServices.GetAllFunctionsAsync();
+        return Ok(functions);
+    }
+
+    /// <summary>
+    /// Consulta las funciones vigentes en cartelera.
+    /// Permite filtrar por nombre y fecha.
+    /// Accesible para clientes (User) y administradores (Admin).
     /// </summary>
     [HttpGet("cartelera")]
-    [Authorize(Roles = "User")]
+    [Authorize(Roles = "User,Admin")]
     public async Task<IActionResult> GetBillboard([FromQuery] string? name, [FromQuery] string? date)
     {
-        // Solicita al servicio la cartelera filtrada según los criterios recibidos.
         var result = await _functionServices.GetBillboardFunctionsAsync(name, date);
 
         if (!result.Success)

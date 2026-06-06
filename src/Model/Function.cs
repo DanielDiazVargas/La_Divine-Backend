@@ -24,4 +24,7 @@ public class Function
     
     // UUID único generado para la validación interna de la entrada o función
     public string ValidateFunction {get;set;} = string.Empty;
+
+    public decimal BasePrice { get; set; }
+
 }
