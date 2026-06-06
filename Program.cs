@@ -26,6 +26,8 @@ builder.Services.AddScoped<ICloudinaryServices, CloudinaryServices>();
 
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 
+builder.Services.AddScoped<IFunctionServices, FunctionServices>();
+
 builder.Services.AddScoped<ISendGridEmailServices, SendGridEmailServices>();
 
 builder.Services.AddScoped<IReservationServices, ReservationServices>();
