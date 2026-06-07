@@ -57,6 +57,7 @@ public class MyReservationDto
     public string FunctionDate { get; set; } = null!;
     public string FunctionTime { get; set; } = null!;
     public int SeatCount { get; set; }
+    public List<string> SeatNumbers { get; set; } = [];
     public decimal TotalPrice { get; set; }
 
     // Estado de la reserva: 0 = Pagada, 1 = Anulada

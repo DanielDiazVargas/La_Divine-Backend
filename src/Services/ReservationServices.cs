@@ -244,6 +244,7 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 FunctionDate = r.Function.DateFunction,
                 FunctionTime = r.Function.TimeFunction,
                 SeatCount = r.SelectedSeats.Count,
+                SeatNumbers = r.SelectedSeats.Select(s => s.SeatNumber).ToList(), // ← agregar esto
                 TotalPrice = r.TotalPrice,
                 Status = r.Status,
                 CreatedAt = r.CreatedAt
