@@ -112,7 +112,6 @@ El backend acepta solicitudes desde los siguientes orígenes:
 | GET | `/api/reservation/seats/{functionId}` | User, Admin | Retorna los asientos de una función con su estado de disponibilidad (FUN-003) |
 | POST | `/api/reservation` | User | Crea una reserva con los asientos seleccionados para el usuario autenticado (FUN-003) |
 | GET | `/api/reservation/my-reservations` | User | Retorna el historial de reservas del usuario autenticado (FUN-004) |
-| DELETE | `/api/reservation/{code}` | User | Anula una reserva por código y libera los asientos asociados (TAR-002) |
 
 > Todos los endpoints de reserva obtienen el identificador del usuario desde el token JWT, sin necesidad de enviarlo en el cuerpo de la petición.
 
@@ -185,7 +184,6 @@ backend/
 | Conflicto de día | POST `/api/function` | Mensaje: "Ya existe una función registrada para este día" |
 | Asiento no disponible | POST `/api/reservation` | Mensaje: "El asiento seleccionado no se encuentra disponible" |
 | Sin reservas | GET `/api/reservation/my-reservations` | Mensaje: "No hay reservas asociadas a su usuario" |
-| Anular reserva no pagada | DELETE `/api/reservation/{code}` | Mensaje: "Esta reserva no puede ser anulada" |
 
 ---
 
