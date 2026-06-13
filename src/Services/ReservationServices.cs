@@ -244,8 +244,10 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 FunctionDate = r.Function.DateFunction,
                 FunctionTime = r.Function.TimeFunction,
                 SeatCount = r.SelectedSeats.Count,
+                SeatNumbers = r.SelectedSeats.Select(s => s.SeatNumber).ToList(),
                 TotalPrice = r.TotalPrice,
                 Status = r.Status,
+                IsPaid = r.IsPaid,
                 CreatedAt = r.CreatedAt
             }).ToList();
 
@@ -300,8 +302,8 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 };
             }
 
-            // Solo se pueden anular reservas en estado Pagada (Status = 0)
-            if (reservation.Status != 0)
+            // Solo se pueden anular reservas activas (Status = 0) y no pagadas
+            if (reservation.Status != 0 || reservation.IsPaid)
             {
                 return new CreateReservationResponse
                 {

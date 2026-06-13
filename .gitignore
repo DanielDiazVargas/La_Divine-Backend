@@ -454,3 +454,6 @@ $RECYCLE.BIN/
 !.vscode/extensions.json
 
 appsettings.json
+appsettings.*.json
+ERS_Divine.md
+claude.md
