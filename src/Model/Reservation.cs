@@ -29,4 +29,7 @@ public class Reservation
 
     // Fecha y hora de creación de la reserva
     public DateTime CreatedAt { get; set; }
+
+    // Estado del pago: false = Pendiente de pago, true = Pagado exitosamente
+    public bool IsPaid { get; set; } = false;
 }

@@ -30,9 +30,6 @@ namespace backend.Src.Db.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<decimal>("BasePrice")
-                        .HasColumnType("numeric");
-
                     b.Property<string>("DateFunction")
                         .IsRequired()
                         .HasColumnType("text");
@@ -77,6 +74,9 @@ namespace backend.Src.Db.Migrations
 
                     b.Property<int>("FunctionId")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ReservationCode")
                         .IsRequired()
