@@ -45,3 +45,16 @@ public class ProcessPaymentResponseDto
     // Mensaje de error descriptivo (solo en caso de rechazo o fallo)
     public string? Message { get; set; }
 }
+
+public class RefundPaymentRequestDto {
+    // Código único de la reserva a pagar (ej: "A1B2C3D4E5F6")
+    public string ReservationCode { get; set; } = string.Empty;
+}
+
+public class RefundPaymentResponseDto {
+    // Indica si el reembolso fue procesado exitosamente
+    public bool Success { get; set; }
+
+    // Mensaje de error descriptivo (solo en caso de rechazo o fallo)
+    public string? Message { get; set; }
+}

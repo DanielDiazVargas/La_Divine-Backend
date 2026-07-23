@@ -28,4 +28,10 @@ public interface IReservationServices
     /// Anula una reserva en estado Pagada y libera los asientos asociados.
     /// </summary>
     Task<CreateReservationResponse> CancelReservationAsync(string reservationCode, int userId);
+
+    /// <summary>
+    /// Revierte una reserva que estaba en proceso de anulación (Status = -1)
+    /// dejándola como estaba antes (Status = 0, asientos reservados).
+    /// </summary>
+    Task<CreateReservationResponse> RevertCancelReservationAsync(string reservationCode, int userId);
 }

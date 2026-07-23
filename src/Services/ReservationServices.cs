@@ -303,8 +303,8 @@ public class ReservationServices(ContextDb contextDb, IPdfServices pdfServices) 
                 };
             }
 
-            // Solo se pueden anular reservas activas (Status = 0) y no pagadas
-            if (reservation.Status != 0 || reservation.IsPaid)
+            // No se puede anular reservas ya anuladas (Status = 1)
+            if (reservation.Status == 1)
             {
                 return new CreateReservationResponse
                 {
@@ -323,7 +323,7 @@ public class ReservationServices(ContextDb contextDb, IPdfServices pdfServices) 
                     seat.Status = 0;
                 }
 
-                reservation.Status = 1;
+                reservation.Status = -1;
 
                 await _contextDb.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -437,6 +437,77 @@ public class ReservationServices(ContextDb contextDb, IPdfServices pdfServices) 
                 Success = false,
                 Message = $"Error al generar el PDF: {ex.Message}",
                 Data = []
+            };
+        }
+    }
+
+    /// <summary>
+    /// Revierte una reserva en proceso de anulación (Status = -1)
+    /// restaurando su estado activo y volviendo a marcar los asientos como reservados.
+    /// </summary>
+    public async Task<CreateReservationResponse> RevertCancelReservationAsync(string reservationCode, int userId) {
+        try {
+            var reservation = await _contextDb.Reservations
+                .Include(r => r.SelectedSeats)
+                .Include(r => r.Function)
+                .FirstOrDefaultAsync(r => r.ReservationCode == reservationCode && r.UserId == userId);
+
+            if (reservation == null) {
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = "Reserva no encontrada.",
+                    Data = null!
+                };
+            }
+
+            // Solo se puede revertir si está en proceso de anulación
+            if (reservation.Status != -1) {
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = "La reserva no está en proceso de anulación.",
+                    Data = null!
+                };
+            }
+
+            using var transaction = await _contextDb.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            try {
+                // Restaura los asientos como reservados
+                foreach (var seat in reservation.SelectedSeats) {
+                    seat.Status = 1;
+                }
+
+                // Restaura la reserva como activa y pagada
+                reservation.Status = 0;
+
+                await _contextDb.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new CreateReservationResponse {
+                    Success = true,
+                    Message = "Reserva restaurada correctamente.",
+                    Data = new ReservationData {
+                        Id = reservation.Id,
+                        ReservationCode = reservation.ReservationCode,
+                        FunctionId = reservation.FunctionId,
+                        FunctionTitle = reservation.Function.Name,
+                        TotalPrice = reservation.TotalPrice,
+                        Status = reservation.Status,
+                        CreatedAt = reservation.CreatedAt
+                    }
+                };
+            } catch (DbUpdateException ex) {
+                await transaction.RollbackAsync();
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = $"Error al restaurar la reserva: {ex.Message}",
+                    Data = null!
+                };
+            }
+        } catch (Exception ex) {
+            return new CreateReservationResponse {
+                Success = false,
+                Message = $"Error inesperado: {ex.Message}",
+                Data = null!
             };
         }
     }

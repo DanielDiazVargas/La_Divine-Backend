@@ -13,4 +13,11 @@ public interface IPaymentService
     /// Retorna un objeto con el resultado del movimiento o un mensaje de error.
     /// </summary>
     Task<ProcessPaymentResponseDto> ProcessPaymentAsync(ProcessPaymentRequestDto dto, int userId);
+
+    /// <summary>
+    /// Procesa el reembolzo de una reserva llamando a la API externa del profesor.
+    /// Actualiza Status en la BD si el reembolzo es exitoso.
+    /// Retorna un objeto con el resultado del movimiento o un mensaje de error estándar.
+    /// </summary>
+    Task<RefundPaymentResponseDto> RefundPaymentAsync(RefundPaymentRequestDto dto, int userId);
 }
