@@ -175,7 +175,12 @@ public class FunctionServices(
                 })
                 .ToDictionaryAsync(group => group.FunctionId);
 
-            var now = DateTime.Now;
+            // DateFunction/TimeFunction se ingresan y almacenan como hora local de Chile (texto plano,
+            // sin zona horaria). DateTime.Now usa la zona horaria del servidor (normalmente UTC en
+            // contenedores), lo que hacía que funciones de hoy con hora futura en Chile se marcaran
+            // como "ya pasadas". Se normaliza "now" a hora de Chile para comparar horas equivalentes.
+            var chileTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Santiago");
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, chileTimeZone);
 
             // Transforma las funciones al DTO de cartelera.
             // También filtra funciones cuya fecha y hora ya pasaron.
