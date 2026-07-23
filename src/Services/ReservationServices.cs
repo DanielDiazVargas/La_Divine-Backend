@@ -12,9 +12,10 @@ namespace La_Divine.Src.Services;
 /// Servicio que gestiona la lógica de negocio para las reservas del teatro.
 /// Incluye creación, consulta y anulación de reservas con control de concurrencia.
 /// </summary>
-public class ReservationServices(ContextDb contextDb) : IReservationServices
+public class ReservationServices(ContextDb contextDb, IPdfServices pdfServices) : IReservationServices
 {
     public readonly ContextDb _contextDb = contextDb;
+    private readonly IPdfServices _pdfServices = pdfServices;
 
     /// <summary>
     /// Obtiene todos los asientos de una función con su estado actual.
@@ -244,9 +245,10 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 FunctionDate = r.Function.DateFunction,
                 FunctionTime = r.Function.TimeFunction,
                 SeatCount = r.SelectedSeats.Count,
-                SeatNumbers = r.SelectedSeats.Select(s => s.SeatNumber).ToList(), // ← agregar esto
+                SeatNumbers = r.SelectedSeats.Select(s => s.SeatNumber).ToList(),
                 TotalPrice = r.TotalPrice,
                 Status = r.Status,
+                IsPaid = r.IsPaid,
                 CreatedAt = r.CreatedAt
             }).ToList();
 
@@ -301,8 +303,8 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 };
             }
 
-            // Solo se pueden anular reservas en estado Pagada (Status = 0)
-            if (reservation.Status != 0)
+            // Solo se pueden anular reservas activas (Status = 0) y no pagadas
+            if (reservation.Status != 0 || reservation.IsPaid)
             {
                 return new CreateReservationResponse
                 {
@@ -360,6 +362,81 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 Success = false,
                 Message = $"Error inesperado: {ex.Message}",
                 Data = null!
+            };
+        }
+    }
+    // ↑ esta llave cierra CancelReservationAsync
+
+    /// <summary>
+    /// Genera la entrada en PDF de una reserva del cliente autenticado.
+    /// Solo se permite descargar si la reserva está pagada (FUN-005).
+    /// </summary>
+    public async Task<PdfReservationResponse> GetReservationPdfAsync(int userId, string reservationCode)
+    {
+        try
+        {
+            var reservation = await _contextDb.Reservations
+                .Include(r => r.Function)
+                .Include(r => r.SelectedSeats)
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.ReservationCode == reservationCode);
+
+            if (reservation == null)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "Reserva no encontrada.",
+                    Data = []
+                };
+            }
+
+            if (reservation.UserId != userId)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "No tiene permiso para descargar esta entrada.",
+                    Data = []
+                };
+            }
+
+            if (!reservation.IsPaid)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "Solo puede descargar la entrada de una reserva pagada.",
+                    Data = []
+                };
+            }
+
+            var pdfDto = new PdfReservationDto
+            {
+                ReservationCode = reservation.ReservationCode,
+                FunctionTitle = reservation.Function.Name,
+                FunctionDate = reservation.Function.DateFunction,
+                FunctionTime = reservation.Function.TimeFunction,
+                HolderName = $"{reservation.User.Name} {reservation.User.LastName}".Trim(),
+                SelectedSeats = [.. reservation.SelectedSeats.Select(s => new ReservationSeatDto
+                {
+                    Id = s.Id,
+                    SeatNumber = s.SeatNumber,
+                    Section = s.Section,
+                    Price = s.Price
+                })],
+                TotalPrice = reservation.TotalPrice
+            };
+
+            return await _pdfServices.GeneratePdfAsync(pdfDto);
+        }
+        catch (Exception ex)
+        {
+            return new PdfReservationResponse
+            {
+                Success = false,
+                Message = $"Error al generar el PDF: {ex.Message}",
+                Data = []
             };
         }
     }

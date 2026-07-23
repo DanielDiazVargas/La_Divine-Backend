@@ -60,8 +60,9 @@ public class MyReservationDto
     public List<string> SeatNumbers { get; set; } = [];
     public decimal TotalPrice { get; set; }
 
-    // Estado de la reserva: 0 = Pagada, 1 = Anulada
+    // Estado de la reserva: 0 = Activa, 1 = Anulada
     public int Status { get; set; }
+    public bool IsPaid { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

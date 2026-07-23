@@ -118,9 +118,9 @@ public class ReservationController(IReservationServices reservationServices) : C
 
     /// <summary>
     /// Anula una reserva del cliente autenticado y libera los asientos asociados.
-    /// DELETE /api/reservation/{code}
+    /// PATCH /api/reservation/{code}/cancel
     /// </summary>
-    [HttpDelete("{code}")]
+    [HttpPatch("{code}/cancel")]
     [Authorize]
     public async Task<IActionResult> CancelReservation(string code)
     {

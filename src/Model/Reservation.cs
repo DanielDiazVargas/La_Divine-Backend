@@ -24,8 +24,11 @@ public class Reservation
     // Suma total de los precios de los asientos seleccionados
     public decimal TotalPrice { get; set; }
 
-    // Estado de la reserva: 0 = Pagada, 1 = Anulada
+    // Estado de la reserva: 0 = Activa, 1 = Anulada
     public int Status { get; set; } = 0;
+
+    // Estado del pago: false = Pendiente de pago, true = Pagado exitosamente
+    public bool IsPaid { get; set; } = false;
 
     // Fecha y hora de creación de la reserva
     public DateTime CreatedAt { get; set; }

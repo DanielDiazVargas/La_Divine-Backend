@@ -31,6 +31,18 @@ builder.Services.AddScoped<IFunctionServices, FunctionServices>();
 builder.Services.AddScoped<ISendGridEmailServices, SendGridEmailServices>();
 
 builder.Services.AddScoped<IReservationServices, ReservationServices>();
+// Servicio que genera la entrada en PDF de una reserva (FUN-005)
+builder.Services.AddScoped<IPdfServices, PdfServices>();
+
+// Servicio en segundo plano que libera asientos de reservas no pagadas tras 10 minutos
+builder.Services.AddHostedService<ReservationCleanupService>();
+
+// Registro del servicio de pagos con HttpClient tipado: reutiliza conexiones TCP y aplica timeout (REQ NF07)
+builder.Services.AddHttpClient<IPaymentService, PaymentService>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["PaymentApi:BaseUrl"]!);
+    client.Timeout     = TimeSpan.FromSeconds(10);
+});
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -61,6 +73,9 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Licencia community de QuestPDF (requerida para generar PDFs - FUN-005)
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
