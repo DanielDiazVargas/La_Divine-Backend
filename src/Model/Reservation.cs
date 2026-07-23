@@ -24,7 +24,7 @@ public class Reservation
     // Suma total de los precios de los asientos seleccionados
     public decimal TotalPrice { get; set; }
 
-    // Estado de la reserva: 0 = Activa, 1 = Anulada
+    // Estado de la reserva: 0 = Activa, 1 = Anulada, -1 = Proceso de anulación y reembolso
     public int Status { get; set; } = 0;
 
     // Estado del pago: false = Pendiente de pago, true = Pagado exitosamente

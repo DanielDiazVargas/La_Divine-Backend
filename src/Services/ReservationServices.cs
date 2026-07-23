@@ -12,9 +12,10 @@ namespace La_Divine.Src.Services;
 /// Servicio que gestiona la lógica de negocio para las reservas del teatro.
 /// Incluye creación, consulta y anulación de reservas con control de concurrencia.
 /// </summary>
-public class ReservationServices(ContextDb contextDb) : IReservationServices
+public class ReservationServices(ContextDb contextDb, IPdfServices pdfServices) : IReservationServices
 {
     public readonly ContextDb _contextDb = contextDb;
+    private readonly IPdfServices _pdfServices = pdfServices;
 
     /// <summary>
     /// Obtiene todos los asientos de una función con su estado actual.
@@ -302,8 +303,8 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                 };
             }
 
-            // Solo se pueden anular reservas activas (Status = 0) y no pagadas
-            if (reservation.Status != 0 || reservation.IsPaid)
+            // No se puede anular reservas ya anuladas (Status = 1)
+            if (reservation.Status == 1)
             {
                 return new CreateReservationResponse
                 {
@@ -322,7 +323,7 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
                     seat.Status = 0;
                 }
 
-                reservation.Status = 1;
+                reservation.Status = -1;
 
                 await _contextDb.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -358,6 +359,152 @@ public class ReservationServices(ContextDb contextDb) : IReservationServices
         {
             return new CreateReservationResponse
             {
+                Success = false,
+                Message = $"Error inesperado: {ex.Message}",
+                Data = null!
+            };
+        }
+    }
+    // ↑ esta llave cierra CancelReservationAsync
+
+    /// <summary>
+    /// Genera la entrada en PDF de una reserva del cliente autenticado.
+    /// Solo se permite descargar si la reserva está pagada (FUN-005).
+    /// </summary>
+    public async Task<PdfReservationResponse> GetReservationPdfAsync(int userId, string reservationCode)
+    {
+        try
+        {
+            var reservation = await _contextDb.Reservations
+                .Include(r => r.Function)
+                .Include(r => r.SelectedSeats)
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.ReservationCode == reservationCode);
+
+            if (reservation == null)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "Reserva no encontrada.",
+                    Data = []
+                };
+            }
+
+            if (reservation.UserId != userId)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "No tiene permiso para descargar esta entrada.",
+                    Data = []
+                };
+            }
+
+            if (!reservation.IsPaid)
+            {
+                return new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "Solo puede descargar la entrada de una reserva pagada.",
+                    Data = []
+                };
+            }
+
+            var pdfDto = new PdfReservationDto
+            {
+                ReservationCode = reservation.ReservationCode,
+                FunctionTitle = reservation.Function.Name,
+                FunctionDate = reservation.Function.DateFunction,
+                FunctionTime = reservation.Function.TimeFunction,
+                HolderName = $"{reservation.User.Name} {reservation.User.LastName}".Trim(),
+                SelectedSeats = [.. reservation.SelectedSeats.Select(s => new ReservationSeatDto
+                {
+                    Id = s.Id,
+                    SeatNumber = s.SeatNumber,
+                    Section = s.Section,
+                    Price = s.Price
+                })],
+                TotalPrice = reservation.TotalPrice
+            };
+
+            return await _pdfServices.GeneratePdfAsync(pdfDto);
+        }
+        catch (Exception ex)
+        {
+            return new PdfReservationResponse
+            {
+                Success = false,
+                Message = $"Error al generar el PDF: {ex.Message}",
+                Data = []
+            };
+        }
+    }
+
+    /// <summary>
+    /// Revierte una reserva en proceso de anulación (Status = -1)
+    /// restaurando su estado activo y volviendo a marcar los asientos como reservados.
+    /// </summary>
+    public async Task<CreateReservationResponse> RevertCancelReservationAsync(string reservationCode, int userId) {
+        try {
+            var reservation = await _contextDb.Reservations
+                .Include(r => r.SelectedSeats)
+                .Include(r => r.Function)
+                .FirstOrDefaultAsync(r => r.ReservationCode == reservationCode && r.UserId == userId);
+
+            if (reservation == null) {
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = "Reserva no encontrada.",
+                    Data = null!
+                };
+            }
+
+            // Solo se puede revertir si está en proceso de anulación
+            if (reservation.Status != -1) {
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = "La reserva no está en proceso de anulación.",
+                    Data = null!
+                };
+            }
+
+            using var transaction = await _contextDb.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+            try {
+                // Restaura los asientos como reservados
+                foreach (var seat in reservation.SelectedSeats) {
+                    seat.Status = 1;
+                }
+
+                // Restaura la reserva como activa y pagada
+                reservation.Status = 0;
+
+                await _contextDb.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new CreateReservationResponse {
+                    Success = true,
+                    Message = "Reserva restaurada correctamente.",
+                    Data = new ReservationData {
+                        Id = reservation.Id,
+                        ReservationCode = reservation.ReservationCode,
+                        FunctionId = reservation.FunctionId,
+                        FunctionTitle = reservation.Function.Name,
+                        TotalPrice = reservation.TotalPrice,
+                        Status = reservation.Status,
+                        CreatedAt = reservation.CreatedAt
+                    }
+                };
+            } catch (DbUpdateException ex) {
+                await transaction.RollbackAsync();
+                return new CreateReservationResponse {
+                    Success = false,
+                    Message = $"Error al restaurar la reserva: {ex.Message}",
+                    Data = null!
+                };
+            }
+        } catch (Exception ex) {
+            return new CreateReservationResponse {
                 Success = false,
                 Message = $"Error inesperado: {ex.Message}",
                 Data = null!

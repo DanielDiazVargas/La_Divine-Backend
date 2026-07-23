@@ -54,6 +54,9 @@ public class CloudinaryServices : ICloudinaryServices
             
             // Respuesta de la API de Cloudinary tras intentar la subida
             var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            Console.WriteLine($"Status: {uploadResult.StatusCode}");
+            Console.WriteLine($"Error: {uploadResult.Error?.Message}");
             
             if(uploadResult.StatusCode == System.Net.HttpStatusCode.OK)
             {
