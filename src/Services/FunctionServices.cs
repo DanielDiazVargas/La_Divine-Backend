@@ -4,7 +4,7 @@ using La_Divine.Src.Services.Interfaces;
 using La_Divine.Src.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-
+using System.Globalization;
 namespace La_Divine.Src.Services;
 
 /// <summary>
@@ -117,133 +117,141 @@ public class FunctionServices(
         }
     }
 
-    /// <summary>
-    /// Consulta las funciones vigentes disponibles en cartelera.
-    /// Aplica filtros opcionales por nombre y fecha, calcula disponibilidad de asientos
-    /// y ordena las funciones desde la más próxima hasta la más lejana.
-    /// </summary>
-    public async Task<BillboardFunctionResponse> GetBillboardFunctionsAsync(string? name, string? date)
+  
+  /// <summary>
+/// Consulta las funciones vigentes disponibles en cartelera.
+/// Aplica filtros opcionales por nombre y fecha, calcula disponibilidad de asientos
+/// y ordena las funciones desde la más próxima hasta la más lejana.
+/// </summary>
+public async Task<BillboardFunctionResponse> GetBillboardFunctionsAsync(string? name, string? date)
+{
+    try
     {
-        try
+        // Obtiene solo funciones activas. Los filtros complejos de fecha y hora
+        // se aplican en memoria porque DateFunction y TimeFunction están guardados como texto.
+        var functions = await _contextDb.Functions
+            .Where(theaterFunction => theaterFunction.State)
+            .ToListAsync();
+
+        // Aplica filtro por nombre sin depender de mayúsculas o minúsculas.
+        if (!string.IsNullOrWhiteSpace(name))
         {
-            // Consulta base de funciones activas o visibles en cartelera.
-            // Se asume que State indica si la función está vigente o habilitada.
-            var query = _contextDb.Functions
-                .Where(theaterFunction => theaterFunction.State)
-                .AsQueryable();
-
-            // Aplica filtro por nombre cuando el usuario ingresa texto.
-            if (!string.IsNullOrWhiteSpace(name))
-            {
-                var normalizedName = name.ToLower();
-
-                query = query.Where(theaterFunction =>
-                    theaterFunction.Name.ToLower().Contains(normalizedName));
-            }
-
-            // Aplica filtro por fecha cuando el usuario selecciona una fecha.
-            if (!string.IsNullOrWhiteSpace(date))
-            {
-                query = query.Where(theaterFunction =>
-                    theaterFunction.DateFunction == date);
-            }
-
-            // Se obtienen las funciones antes de ordenar por fecha y hora,
-            // ya que actualmente estos campos están almacenados como texto.
-            var functions = await query.ToListAsync();
-
-            var functionIds = functions
-                .Select(theaterFunction => theaterFunction.Id)
+            functions = functions
+                .Where(theaterFunction =>
+                    theaterFunction.Name.Contains(name.Trim(), StringComparison.OrdinalIgnoreCase))
                 .ToList();
+        }
 
-            // Calcula la cantidad total y disponible de asientos asociados a cada función.
+        DateOnly? selectedDate = null;
+
+        // Aplica filtro por fecha, pero parseando el texto para evitar errores de formato.
+        if (!string.IsNullOrWhiteSpace(date))
+        {
+            if (!TryParseDateValue(date, out var parsedSelectedDate))
+            {
+                return new BillboardFunctionResponse
+                {
+                    Success = false,
+                    Message = "La fecha ingresada no tiene un formato válido.",
+                    Data = []
+                };
+            }
+
+            selectedDate = parsedSelectedDate;
+        }
+
+        var now = DateTime.Now;
+        var today = DateOnly.FromDateTime(now);
+
+        // Se compara hasta minutos para evitar que una función de las 15:44 desaparezca
+        // durante el mismo minuto por los segundos actuales del sistema.
+        var currentTime = new TimeOnly(now.Hour, now.Minute);
+
+        // Convierte fecha y hora por separado para evitar que las funciones del día actual
+        // sean tratadas como vencidas a las 00:00 horas.
+        var validFunctions = functions
+            .Select(theaterFunction => new
+            {
+                TheaterFunction = theaterFunction,
+                CanParseDateTime = TryParseFunctionDateTime(
+                    theaterFunction,
+                    out var functionDate,
+                    out var functionTime),
+                FunctionDate = functionDate,
+                FunctionTime = functionTime
+            })
+            .Where(item => item.CanParseDateTime)
+            .Where(item =>
+                selectedDate == null ||
+                item.FunctionDate == selectedDate.Value)
+            .Where(item =>
+                item.FunctionDate > today ||
+                item.FunctionDate == today && item.FunctionTime >= currentTime)
+            .OrderBy(item => item.FunctionDate)
+            .ThenBy(item => item.FunctionTime)
+            .ToList();
+
+        var functionIds = validFunctions
+            .Select(item => item.TheaterFunction.Id)
+            .ToList();
+
+        // Calcula la cantidad total y disponible de asientos asociados a cada función.
             // Status = 0 corresponde a disponible y Status = 1 corresponde a reservado.
-            var seatStats = await _contextDb.Seats
-                .Where(seat => functionIds.Contains(seat.FunctionId))
-                .GroupBy(seat => seat.FunctionId)
-                .Select(group => new
-                {
-                    FunctionId = group.Key,
-                    TotalSeats = group.Count(),
-                    AvailableSeats = group.Count(seat => seat.Status == 0),
-
-                    // Se utiliza el menor precio de asiento como precio base temporal.
-                    // TODO:
-                    // Reemplazar este cálculo si el requerimiento "Registrar Función"
-                    // incorpora un campo específico para precio base de la función.
-                    BasePrice = group.Min(seat => seat.Price)
-                })
-                .ToDictionaryAsync(group => group.FunctionId);
-
-            var now = DateTime.Now;
-
-            // Transforma las funciones al DTO de cartelera.
-            // También filtra funciones cuya fecha y hora ya pasaron.
-            var billboardFunctions = functions
-                .Select(theaterFunction =>
-                {
-                    var canParseDate = DateTime.TryParse(
-                        $"{theaterFunction.DateFunction} {theaterFunction.TimeFunction}",
-                        out var parsedDate
-                    );
-
-                    return new
-                    {
-                        TheaterFunction = theaterFunction,
-                        CanParseDate = canParseDate,
-                        ParsedDate = parsedDate
-                    };
-                })
-                .Where(item => item.CanParseDate && item.ParsedDate >= now)
-                .OrderBy(item => item.ParsedDate)
-                .Select(item =>
-                {
-                    var theaterFunction = item.TheaterFunction;
-
-                    var hasSeatStats = seatStats.TryGetValue(
-                        theaterFunction.Id,
-                        out var stats
-                    );
-
-                    return new BillboardFunctionDto
-                    {
-                        Id = theaterFunction.Id,
-                        Name = theaterFunction.Name,
-                        Description = theaterFunction.Description,
-                        DateFunction = theaterFunction.DateFunction,
-                        TimeFunction = theaterFunction.TimeFunction,
-                        ImageUrl = theaterFunction.Image ?? string.Empty,
-
-                        BasePrice = hasSeatStats ? stats!.BasePrice : 0,
-
-                        // Si aún no se generaron asientos para la función, se muestra 0 disponible.
-                        AvailableSeats = hasSeatStats ? stats!.AvailableSeats : 0,
-
-                        // TODO:
-                        // Si una función aún no tiene asientos generados, este valor quedará en 0.
-                        // Cuando "Registrar Función" cree asientos automáticamente, este dato vendrá desde la tabla Seats.
-                        TotalSeats = hasSeatStats ? stats!.TotalSeats : 0
-                    };
-                })
-                .ToList();
-
-            return new BillboardFunctionResponse
+        var seatStats = await _contextDb.Seats
+            .Where(seat => functionIds.Contains(seat.FunctionId))
+            .GroupBy(seat => seat.FunctionId)
+            .Select(group => new
             {
-                Success = true,
-                Message = "Cartelera obtenida correctamente.",
-                Data = billboardFunctions
-            };
-        }
-        catch (Exception ex)
+                FunctionId = group.Key,
+                TotalSeats = group.Count(),
+                AvailableSeats = group.Count(seat => seat.Status == 0),
+
+                // Se utiliza el menor precio de asiento como precio base temporal.
+                BasePrice = group.Min(seat => seat.Price)
+            })
+            .ToDictionaryAsync(group => group.FunctionId);
+
+        var billboardFunctions = validFunctions
+            .Select(item =>
+            {
+                var theaterFunction = item.TheaterFunction;
+
+                var hasSeatStats = seatStats.TryGetValue(
+                    theaterFunction.Id,
+                    out var stats);
+
+                return new BillboardFunctionDto
+                {
+                    Id = theaterFunction.Id,
+                    Name = theaterFunction.Name,
+                    Description = theaterFunction.Description,
+                    DateFunction = theaterFunction.DateFunction,
+                    TimeFunction = theaterFunction.TimeFunction,
+                    ImageUrl = theaterFunction.Image ?? string.Empty,
+                    BasePrice = hasSeatStats ? stats!.BasePrice : 0,
+                    AvailableSeats = hasSeatStats ? stats!.AvailableSeats : 0,
+                    TotalSeats = hasSeatStats ? stats!.TotalSeats : 0
+                };
+            })
+            .ToList();
+
+        return new BillboardFunctionResponse
         {
-            return new BillboardFunctionResponse
-            {
-                Success = false,
-                Message = $"Error al consultar cartelera: {ex.Message}",
-                Data = []
-            };
-        }
+            Success = true,
+            Message = "Cartelera obtenida correctamente.",
+            Data = billboardFunctions
+        };
     }
+    catch (Exception ex)
+    {
+        return new BillboardFunctionResponse
+        {
+            Success = false,
+            Message = $"Error al consultar cartelera: {ex.Message}",
+            Data = []
+        };
+    }
+}
 
     /// <summary>
     /// Genera todos los asientos de una función según el mapa del teatro (Figura 1).
@@ -320,4 +328,126 @@ public class FunctionServices(
             })
         .ToListAsync();
     }
+
+    /// <summary>
+/// Convierte la fecha y hora de una función en valores comparables.
+/// Esto evita que una función del día actual se interprete como vencida a las 00:00.
+/// </summary>
+private static bool TryParseFunctionDateTime(
+    Function theaterFunction,
+    out DateOnly functionDate,
+    out TimeOnly functionTime)
+{
+    functionDate = default;
+    functionTime = default;
+
+    if (!TryParseDateValue(theaterFunction.DateFunction, out functionDate))
+    {
+        return false;
+    }
+
+    if (!TryParseTimeValue(theaterFunction.TimeFunction, out functionTime))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+/// <summary>
+/// Convierte una fecha almacenada como texto a DateOnly.
+/// Soporta formatos usados por input date y formatos habituales en español.
+/// </summary>
+private static bool TryParseDateValue(string dateValue, out DateOnly parsedDate)
+{
+    parsedDate = default;
+
+    if (string.IsNullOrWhiteSpace(dateValue))
+    {
+        return false;
+    }
+
+    var cleanDate = dateValue.Trim();
+
+    // Si por alguna razón la fecha viene como DateTime completo,
+    // se conserva solamente la parte de la fecha.
+    if (cleanDate.Contains('T'))
+    {
+        cleanDate = cleanDate.Split('T')[0];
+    }
+    else if (cleanDate.Contains(' '))
+    {
+        cleanDate = cleanDate.Split(' ')[0];
+    }
+
+    var formats = new[]
+    {
+        "yyyy-MM-dd",
+        "dd-MM-yyyy",
+        "dd/MM/yyyy",
+        "yyyy/MM/dd"
+    };
+
+    foreach (var format in formats)
+    {
+        if (DateOnly.TryParseExact(
+            cleanDate,
+            format,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out parsedDate))
+        {
+            return true;
+        }
+    }
+
+    return DateOnly.TryParse(
+        cleanDate,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.None,
+        out parsedDate);
+}
+
+/// <summary>
+/// Convierte una hora almacenada como texto a TimeOnly.
+/// Soporta horas con y sin segundos.
+/// </summary>
+private static bool TryParseTimeValue(string timeValue, out TimeOnly parsedTime)
+{
+    parsedTime = default;
+
+    if (string.IsNullOrWhiteSpace(timeValue))
+    {
+        return false;
+    }
+
+    var cleanTime = timeValue.Trim();
+
+    var formats = new[]
+    {
+        "HH:mm",
+        "H:mm",
+        "HH:mm:ss",
+        "H:mm:ss"
+    };
+
+    foreach (var format in formats)
+    {
+        if (TimeOnly.TryParseExact(
+            cleanTime,
+            format,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out parsedTime))
+        {
+            return true;
+        }
+    }
+
+    return TimeOnly.TryParse(
+        cleanTime,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.None,
+        out parsedTime);
+}
 }

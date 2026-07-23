@@ -44,6 +44,8 @@ builder.Services.AddHttpClient<IPaymentService, PaymentService>(client =>
     client.Timeout     = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddScoped<IReportServices, ReportServices>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
