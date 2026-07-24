@@ -34,4 +34,9 @@ public interface IReservationServices
     /// dejándola como estaba antes (Status = 0, asientos reservados).
     /// </summary>
     Task<CreateReservationResponse> RevertCancelReservationAsync(string reservationCode, int userId);
+
+    /// <summary>
+    /// Genera la entrada en PDF de una reserva pagada del cliente autenticado (FUN-005).
+    /// </summary>
+    Task<PdfReservationResponse> GetReservationPdfAsync(int userId, string reservationCode);
 }
