@@ -65,7 +65,7 @@ public class PdfServices : IPdfServices
                                         {
                                             col.Item().Text("Fecha y hora").FontSize(10).Bold().FontColor(Primario);
                                             col.Item().PaddingTop(6)
-                                                .Text($"{reservationData.FunctionDate}  -  {reservationData.FunctionTime}")
+                                                .Text($"{(DateTime.TryParse(reservationData.FunctionDate, out var fecha) ? fecha.ToString("dd/MM/yyyy") : reservationData.FunctionDate)}  -  {reservationData.FunctionTime}")
                                                 .FontSize(12).FontColor("#1a1a1a");
                                         });
 
@@ -96,7 +96,7 @@ public class PdfServices : IPdfServices
                                     seatCol.Item()
                                         .PaddingVertical(3)
                                         .Border(1).BorderColor(Dorado)
-                                        .Background("#fffdf7").Padding(8)
+                                        .Background(Acento).Padding(10)
                                         .Row(row =>
                                         {
                                             row.RelativeItem().Text($"Asiento: {seat.SeatNumber}")
