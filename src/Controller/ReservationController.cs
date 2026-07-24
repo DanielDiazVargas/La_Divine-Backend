@@ -154,4 +154,41 @@ public class ReservationController(IReservationServices reservationServices) : C
             });
         }
     }
+    /// <summary>
+    /// Descarga la entrada en PDF de una reserva pagada del cliente autenticado.
+    /// GET /api/reservation/{code}/pdf
+    /// </summary>
+    [HttpGet("{code}/pdf")]
+    [Authorize]
+    public async Task<IActionResult> DownloadPdf(string code)
+    {
+        try
+        {
+            var userClaimId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userClaimId, out int userId))
+            {
+                return Unauthorized(new PdfReservationResponse
+                {
+                    Success = false,
+                    Message = "Usuario no autenticado.",
+                    Data = []
+                });
+            }
+
+            var response = await _reservationServices.GetReservationPdfAsync(userId, code);
+            if (!response.Success)
+                return BadRequest(response);
+
+            return File(response.Data, "application/pdf", $"entrada_{code}.pdf");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new PdfReservationResponse
+            {
+                Success = false,
+                Message = $"Error al generar el PDF: {ex.Message}",
+                Data = []
+            });
+        }
+    }
 }
