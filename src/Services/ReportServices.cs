@@ -112,10 +112,7 @@ public class ReportServices : IReportServices
 
             // Si existen funciones en el rango, pero no hay ventas ni reservas,
             // se responde con el mensaje indicado por el requerimiento.
-            var hasReportData =
-                report.Summary.TotalSoldTickets > 0 ||
-                report.Summary.TotalPendingTickets > 0 ||
-                report.Summary.TotalRevenue > 0;
+            var hasReportData = reservations.Count > 0;
 
             if (!hasReportData)
             {
@@ -155,8 +152,7 @@ public class ReportServices : IReportServices
             FunctionCount = functions.Count,
             TotalSoldTickets = paidReservations.Sum(reservation => reservation.SelectedSeats.Count),
             TotalPendingTickets = pendingReservations.Sum(reservation => reservation.SelectedSeats.Count),
-            TotalRevenue = paidReservations.Sum(reservation =>
-                reservation.SelectedSeats.Sum(seat => seat.Price))
+            TotalRevenue = paidReservations.Sum(reservation => reservation.TotalPrice)
         };
     }
 
@@ -190,8 +186,7 @@ public class ReportServices : IReportServices
                     TimeFunction = theaterFunction.TimeFunction,
                     SoldTickets = paidReservations.Sum(reservation => reservation.SelectedSeats.Count),
                     PendingTickets = pendingReservations.Sum(reservation => reservation.SelectedSeats.Count),
-                    TotalRevenue = paidReservations.Sum(reservation =>
-                        reservation.SelectedSeats.Sum(seat => seat.Price))
+                    TotalRevenue = paidReservations.Sum(reservation => reservation.TotalPrice)
                 };
             })
             .OrderByDescending(functionReport => functionReport.TotalRevenue)
@@ -327,38 +322,58 @@ public class ReportServices : IReportServices
         return Math.Round(value * 100m / total, 2);
     }
 
-    /// <summary>
-    /// Convierte una fecha de texto a DateOnly usando formatos habituales del proyecto.
-    /// </summary>
-    private static bool TryParseDate(string dateValue, out DateOnly parsedDate)
+/// <summary>
+/// Convierte una fecha de texto a DateOnly usando formatos habituales del proyecto.
+/// También limpia valores que vengan como DateTime completo.
+/// </summary>
+private static bool TryParseDate(string dateValue, out DateOnly parsedDate)
+{
+    parsedDate = default;
+
+    if (string.IsNullOrWhiteSpace(dateValue))
     {
-        var formats = new[]
-        {
-            "yyyy-MM-dd",
-            "dd-MM-yyyy",
-            "dd/MM/yyyy",
-            "yyyy/MM/dd"
-        };
+        return false;
+    }
 
-        foreach (var format in formats)
-        {
-            if (DateOnly.TryParseExact(
-                dateValue,
-                format,
-                CultureInfo.InvariantCulture,
-                DateTimeStyles.None,
-                out parsedDate))
-            {
-                return true;
-            }
-        }
+    var cleanDate = dateValue.Trim();
 
-        return DateOnly.TryParse(
-            dateValue,
+    // Si la fecha viene como DateTime completo, se conserva solo la parte de fecha.
+    if (cleanDate.Contains('T'))
+    {
+        cleanDate = cleanDate.Split('T')[0];
+    }
+    else if (cleanDate.Contains(' '))
+    {
+        cleanDate = cleanDate.Split(' ')[0];
+    }
+
+    var formats = new[]
+    {
+        "yyyy-MM-dd",
+        "dd-MM-yyyy",
+        "dd/MM/yyyy",
+        "yyyy/MM/dd"
+    };
+
+    foreach (var format in formats)
+    {
+        if (DateOnly.TryParseExact(
+            cleanDate,
+            format,
             CultureInfo.InvariantCulture,
             DateTimeStyles.None,
-            out parsedDate);
+            out parsedDate))
+        {
+            return true;
+        }
     }
+
+    return DateOnly.TryParse(
+        cleanDate,
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.None,
+        out parsedDate);
+}
 
     /// <summary>
     /// Define el orden visual de las secciones de acuerdo con el mapa del teatro.
