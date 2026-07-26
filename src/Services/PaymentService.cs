@@ -13,10 +13,11 @@ namespace La_Divine.Src.Services;
 /// Se comunica con la API de pagos del profesor para registrar el cobro,
 /// y actualiza el estado de la reserva en la base de datos si el cobro es exitoso.
 /// </summary>
-public class PaymentService(ContextDb contextDb, HttpClient httpClient) : IPaymentService
+public class PaymentService(ContextDb contextDb, HttpClient httpClient, ISendGridEmailServices sendGridEmailServices) : IPaymentService
 {
     private readonly ContextDb _contextDb = contextDb;
     private readonly HttpClient _httpClient = httpClient;
+    private readonly ISendGridEmailServices _sendGridEmailServices = sendGridEmailServices;
 
     // Mensaje de error estándar definido en la ERS para pagos rechazados o fallidos
     private const string PaymentRejectedMessage = "El pago no pudo ser procesado. Verifique los datos ingresados e intente nuevamente";
@@ -276,7 +277,13 @@ public class PaymentService(ContextDb contextDb, HttpClient httpClient) : IPayme
             reservation.Status = 1; // Anulada
             await _contextDb.SaveChangesAsync();
 
-            // TODO: Logica del correo electronico
+            // Notificación al cliente informando la anulación y el reembolso (TAR-002)
+            await _sendGridEmailServices.SendRefundEmailAsync(
+                toEmail: reservation.User.Email,
+                nombre: reservation.User.Name,
+                codigoReserva: reservation.ReservationCode,
+                montoReembolsado: reservation.TotalPrice.ToString("N0")
+            );
 
             return new RefundPaymentResponseDto
             {
