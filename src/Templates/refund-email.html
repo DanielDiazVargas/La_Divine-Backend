@@ -1,0 +1,54 @@
+<div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f5; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.1);">
+
+        <!-- Encabezado -->
+        <div style="background-color: #721c24; padding: 40px 20px; text-align: center;">
+            <h1 style="color: #f8d7da; margin: 0; font-size: 28px; letter-spacing: 2px; text-transform: uppercase;">
+                🎭 Teatro La Divine
+            </h1>
+        </div>
+
+        <!-- Cuerpo del Correo -->
+        <div style="padding: 40px 30px;">
+            <h2 style="color: #333333; font-size: 22px; margin-top: 0;">Hola, {{nombre}}</h2>
+
+            <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                Te confirmamos que tu reserva en <strong>{{email}}</strong> ha sido <strong>anulada</strong> y hemos procesado el reembolso correspondiente a tu tarjeta de crédito.
+            </p>
+
+            <!-- Caja de detalle de la anulación -->
+            <div style="background-color: #f8f9fa; border-left: 5px solid #721c24; padding: 20px; margin: 30px 0; border-radius: 0 8px 8px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #777777; font-size: 14px;">Código de reserva</td>
+                        <td style="padding: 8px 0; color: #721c24; font-size: 16px; font-weight: bold; text-align: right; letter-spacing: 1px;">{{codigo_reserva}}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #777777; font-size: 14px; border-top: 1px solid #eeeeee;">Monto reembolsado</td>
+                        <td style="padding: 8px 0; color: #721c24; font-size: 16px; font-weight: bold; text-align: right; border-top: 1px solid #eeeeee;">${{monto_reembolsado}}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <p style="color: #555555; font-size: 16px; line-height: 1.6;">
+                Los asientos asociados a esta reserva fueron liberados. Si no reconoces esta operación o tienes dudas sobre el reembolso, contáctanos a la brevedad.
+            </p>
+
+            <!-- Botón de Acción -->
+            <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                <a href="https://divinecommit-frontend.onrender.com/login" style="background-color: #721c24; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: bold; display: inline-block;">
+                    Ver mis reservas
+                </a>
+            </div>
+        </div>
+
+        <!-- Pie de página -->
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #eeeeee;">
+            <p style="color: #999999; font-size: 13px; margin: 0;">
+                © 2026 Teatro La Divine. Todos los derechos reservados.<br>
+                Antofagasta, Chile.
+            </p>
+        </div>
+
+    </div>
+</div>
