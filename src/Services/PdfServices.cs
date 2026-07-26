@@ -157,9 +157,6 @@ public class PdfServices : IPdfServices
                             column.Item().PaddingTop(8).AlignCenter()
                                 .Text("Presente este código en la taquilla del teatro el día de la función.")
                                 .FontSize(9).FontColor("#888");
-                            column.Item().AlignCenter().PaddingTop(4)
-                                .Text($"Descargado: {DateTime.Now:dd/MM/yyyy HH:mm}")
-                                .FontSize(8).FontColor("#aaa");
                         });
                     });
                 }).GeneratePdf();
