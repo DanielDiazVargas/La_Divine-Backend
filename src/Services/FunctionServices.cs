@@ -53,6 +53,17 @@ public class FunctionServices(
 
             if (request.Image != null)
             {
+                // Solo se permiten archivos de imagen como afiche (rechaza pdf, txt, etc.)
+                if (!request.Image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new CreateFunctionResponse
+                    {
+                        Message = "El archivo de portada debe ser una imagen (jpg, png, etc.)",
+                        Success = false,
+                        Data = null!
+                    };
+                }
+
                 // Sube la imagen del afiche a Cloudinary dentro de la carpeta de funciones.
                 var imageUrl = await _cloudinaryServices.UploadImageAsync(request.Image, "functions");
 

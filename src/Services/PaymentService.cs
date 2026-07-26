@@ -274,6 +274,7 @@ public class PaymentService(ContextDb contextDb, HttpClient httpClient) : IPayme
             }
 
             reservation.Status = 1; // Anulada
+            reservation.IsPaid = false;
             await _contextDb.SaveChangesAsync();
 
             // TODO: Logica del correo electronico
