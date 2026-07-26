@@ -203,6 +203,32 @@ public class PaymentService(ContextDb contextDb, HttpClient httpClient, ISendGri
     }
 
     /// <summary>
+    /// Clase interna para deserializar la respuesta exitosa de /pago/anular en la API del profesor.
+    /// A diferencia de /pago/procesar, el monto se devuelve en el campo "monto_reembolsado".
+    /// </summary>
+    private class ExternalRefundResponse
+    {
+        [JsonPropertyName("codigo_movimiento")]
+        public int CodigoMovimiento { get; set; }
+
+        [JsonPropertyName("codigo_reserva")]
+        public string CodigoReserva { get; set; } = string.Empty;
+
+        [JsonPropertyName("monto_reembolsado")]
+        public decimal MontoReembolsado { get; set; }
+    }
+
+    /// <summary>
+    /// Clase interna para deserializar los mensajes de error que retorna la API del profesor
+    /// cuando la solicitud es rechazada (ej: "Esta reserva ya fue reembolsada.").
+    /// </summary>
+    private class ExternalErrorResponse
+    {
+        [JsonPropertyName("error")]
+        public string? Error { get; set; }
+    }
+
+    /// <summary>
     /// Procesa el reembolzo de una reserva llamando a la API externa del profesor.
     /// Actualiza Status en la BD si el reembolzo es exitoso.
     /// Retorna un objeto con el resultado del movimiento o un mensaje de error estándar.
@@ -250,28 +276,65 @@ public class PaymentService(ContextDb contextDb, HttpClient httpClient, ISendGri
             );
 
             // Envío de la solicitud a la API de pagos del profesor con el timeout configurado en Program.cs (REQ NF07)
-            var response = await _httpClient.PostAsync("/pago/anular", jsonContent);
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.PostAsync("/pago/anular", jsonContent);
+            }
+            catch (TaskCanceledException)
+            {
+                // El timeout del cliente no cancela el procesamiento en el servidor de la API del
+                // profesor (corre en hosting gratuito que puede tardar en "despertar" tras
+                // inactividad). Se reintenta una vez para averiguar si la operación terminó
+                // completándose igual, en vez de asumir que falló y revertir localmente una
+                // anulación que en realidad sí ocurrió del lado del proveedor de pagos.
+                var retryContent = new StringContent(
+                    JsonSerializer.Serialize(refundPayload),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+                response = await _httpClient.PostAsync("/pago/anular", retryContent);
+            }
+
+            var alreadyRefunded = false;
 
             if (!response.IsSuccessStatusCode)
             {
-                return new RefundPaymentResponseDto
+                var errorBody = await response.Content.ReadAsStringAsync();
+                var externalError = JsonSerializer.Deserialize<ExternalErrorResponse>(errorBody);
+
+                // Si la API indica que la reserva ya fue reembolsada, es porque el intento original
+                // (el que agotó el timeout) sí se había completado en el servidor. Se continúa como
+                // éxito para no dejar la reserva desincronizada entre nuestra BD y el sistema de pagos.
+                if (externalError?.Error != null &&
+                    externalError.Error.Contains("ya fue reembolsada", StringComparison.OrdinalIgnoreCase))
                 {
-                    Success = false,
-                    Message = RefundRejectedMessage
-                };
+                    alreadyRefunded = true;
+                }
+                else
+                {
+                    return new RefundPaymentResponseDto
+                    {
+                        Success = false,
+                        Message = RefundRejectedMessage
+                    };
+                }
             }
 
-            // Deserialización de la respuesta exitosa de la API del profesor
-            var responseBody = await response.Content.ReadAsStringAsync();
-            var externalResponse = JsonSerializer.Deserialize<ExternalPaymentResponse>(responseBody);
-
-            if (externalResponse == null)
+            if (!alreadyRefunded)
             {
-                return new RefundPaymentResponseDto
+                // Deserialización de la respuesta exitosa de la API del profesor
+                var responseBody = await response.Content.ReadAsStringAsync();
+                var externalResponse = JsonSerializer.Deserialize<ExternalRefundResponse>(responseBody);
+
+                if (externalResponse == null)
                 {
-                    Success = false,
-                    Message = RefundRejectedMessage
-                };
+                    return new RefundPaymentResponseDto
+                    {
+                        Success = false,
+                        Message = RefundRejectedMessage
+                    };
+                }
             }
 
             reservation.Status = 1; // Anulada
